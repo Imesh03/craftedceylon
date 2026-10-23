@@ -1,0 +1,89 @@
+/* ==========================================================================
+   CraftedCeylon - Main Custom Stylesheet (Modern Dark & Light UI)
+   ========================================================================== */
+
+:root {
+    --bg-color: #f8f9fa;
+    --text-color: #212529;
+    --nav-bg: #ffffff;
+    --card-bg: #ffffff;
+    --border-color: #dee2e6;
+}
+
+[data-bs-theme="dark"] {
+    --bg-color: #121216;
+    --text-color: #e0e0e0;
+    --nav-bg: #1a1a24;
+    --card-bg: #1e1e2f;
+    --border-color: #2d2d3d;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Navbar Customization */
+.navbar {
+    background-color: var(--nav-bg) !important;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Creative Solution for Long User Names in Navigation Bar */
+.username-truncate {
+    display: inline-block;
+    max-width: 130px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+}
+
+@media (min-width: 992px) {
+    .username-truncate {
+        max-width: 160px;
+    }
+}
+
+/* Custom Cards & Containers */
+.card, .dark-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="dark"] .card, 
+[data-bs-theme="dark"] .dark-card {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Form Controls */
+.form-control, .form-select {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 8px;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--card-bg);
+    border-color: #198754;
+    color: var(--text-color);
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+}
+
+/* Buttons & Badges */
+.btn-success {
+    background-color: #198754;
+    border: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    background-color: #157347;
+    transform: translateY(-1px);
+}
