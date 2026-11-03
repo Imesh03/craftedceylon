@@ -55,7 +55,7 @@ if (isset($_POST['place_order'])) {
         $order_reference = 'CC-' . strtoupper(uniqid());
         $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : NULL;
 
-        // Insert into Orders Table (Columns and types perfectly matched)
+        // Insert into Orders Table
         $stmt = $conn->prepare("INSERT INTO orders (user_id, order_reference, total_amount, currency_code, shipping_name, shipping_email, shipping_phone, shipping_address, city, postal_code, shipping_country, is_gift_wrapped, gift_wrap_fee, gift_message, order_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Processing')");
         $stmt->bind_param("isdssssssssids", $user_id, $order_reference, $final_total, $currency, $shipping_name, $shipping_email, $shipping_phone, $shipping_address, $city, $postal_code, $shipping_country, $is_gift_wrapped, $gift_wrap_fee, $gift_message);
         
@@ -100,39 +100,115 @@ include 'includes/header.php';
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
+<!-- Creative Blurred Background & Dark Styling -->
+<style>
+    body {
+        position: relative;
+        background-color: #0d0d12;
+        color: #ffffff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url('assets/images/cover.jpg');
+        background-size: cover;
+        background-position: center;
+        filter: blur(20px) brightness(0.35);
+        z-index: -1;
+    }
+
+    .dark-glass-card {
+        background: rgba(26, 26, 40, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+        color: #ffffff;
+    }
+
+    .form-control, .form-select {
+        background-color: rgba(18, 18, 22, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        border-radius: 10px;
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: rgba(18, 18, 22, 0.95);
+        border-color: #198754;
+        color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+    }
+
+    /* Select2 custom styling for dark mode compatibility */
+    .select2-container--bootstrap-5 .select2-selection {
+        background-color: rgba(18, 18, 22, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        border-radius: 10px;
+        min-height: 38px;
+    }
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+        color: #ffffff;
+        line-height: 1.5;
+    }
+    .select2-dropdown {
+        background-color: #1a1a28 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
+    }
+    .select2-search__field {
+        background-color: rgba(18, 18, 22, 0.9) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .select2-results__option {
+        color: #ffffff !important;
+    }
+    .select2-results__option--highlighted {
+        background-color: #198754 !important;
+        color: #ffffff !important;
+    }
+</style>
+
 <div class="container my-5">
     <h2 class="fw-bold mb-4 text-success"><i class="bi bi-bag-check"></i> Secure Checkout</h2>
 
     <?php if(!empty($error_msg)): ?>
-        <div class="alert alert-danger"><?php echo $error_msg; ?></div>
+        <div class="alert alert-danger bg-danger text-white border-0 shadow-sm mb-4"><?php echo $error_msg; ?></div>
     <?php endif; ?>
 
     <form action="checkout.php" method="POST" id="checkoutForm">
         <div class="row g-5">
             <!-- Shipping & Contact Details -->
             <div class="col-lg-7">
-                <div class="card shadow-sm border p-4">
+                <div class="dark-glass-card p-4">
                     <h5 class="fw-bold mb-3 text-success"><i class="bi bi-truck"></i> Shipping & Delivery Information</h5>
                     
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Full Name</label>
+                        <label class="form-label small fw-bold text-secondary">Full Name</label>
                         <input type="text" name="shipping_name" class="form-control" required value="<?php echo isset($_SESSION['user_name']) ? htmlspecialchars($_SESSION['user_name']) : ''; ?>">
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold">Email Address</label>
+                            <label class="form-label small fw-bold text-secondary">Email Address</label>
                             <input type="email" name="shipping_email" class="form-control" required value="<?php echo isset($_SESSION['user_email']) ? htmlspecialchars($_SESSION['user_email']) : ''; ?>">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold">Phone Number</label>
+                            <label class="form-label small fw-bold text-secondary">Phone Number</label>
                             <input type="text" name="shipping_phone" class="form-control" required placeholder="+94 XXXXXXXXX">
                         </div>
                     </div>
 
                     <!-- Searchable Country Selection -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Country / Region</label>
+                        <label class="form-label small fw-bold text-secondary">Country / Region</label>
                         <select name="shipping_country" id="shippingCountry" class="form-select" required onchange="updateSummary()">
                             <option value="" disabled selected>Select or type your country...</option>
                             <option value="Sri Lanka">Sri Lanka</option>
@@ -151,33 +227,33 @@ include 'includes/header.php';
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Street Address</label>
+                        <label class="form-label small fw-bold text-secondary">Street Address</label>
                         <textarea name="shipping_address" class="form-control" rows="2" required placeholder="House no, Street, Area"></textarea>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold">City</label>
+                            <label class="form-label small fw-bold text-secondary">City</label>
                             <input type="text" name="city" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold">Postal Code</label>
+                            <label class="form-label small fw-bold text-secondary">Postal Code</label>
                             <input type="text" name="postal_code" class="form-control" required placeholder="e.g. 00100">
                         </div>
                     </div>
 
                     <!-- Gift Wrapping Option -->
-                    <hr class="my-4">
+                    <hr class="border-secondary border-opacity-25 my-4">
                     <h5 class="fw-bold mb-3 text-success"><i class="bi bi-gift"></i> Gift Options</h5>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" name="is_gift_wrapped" id="giftWrapCheck" value="1" onchange="toggleGiftBox(this)">
-                        <label class="form-check-label fw-bold" for="giftWrapCheck">
+                        <label class="form-check-label fw-bold text-white" for="giftWrapCheck">
                             Add Special Gift Wrapping & Greeting Note (<?php echo ($currency == 'USD') ? '$ 2.50' : 'Rs. 700.00'; ?>)
                         </label>
                     </div>
 
                     <div class="mb-3" id="giftMsgBox" style="display: none;">
-                        <label class="form-label small fw-bold">Personalized Greeting Note Message</label>
+                        <label class="form-label small fw-bold text-secondary">Personalized Greeting Note Message</label>
                         <textarea name="gift_message" class="form-control" rows="2" placeholder="Write your heartfelt message here..."></textarea>
                     </div>
                 </div>
@@ -185,16 +261,16 @@ include 'includes/header.php';
 
             <!-- Order Summary Sidebar -->
             <div class="col-lg-5">
-                <div class="card shadow-sm border p-4 bg-body-tertiary">
-                    <h5 class="fw-bold mb-3 border-bottom pb-2">Your Order Summary</h5>
+                <div class="dark-glass-card p-4">
+                    <h5 class="fw-bold mb-3 border-bottom border-secondary border-opacity-25 pb-2 text-white">Your Order Summary</h5>
                     <ul class="list-group list-group-flush mb-3 bg-transparent">
                         <?php foreach($cart as $item): 
                             $item_price = ($currency == 'USD') ? $item['price_usd'] : $item['price_lkr'];
                         ?>
-                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent text-white border-secondary border-opacity-25">
                             <div>
-                                <h6 class="mb-0 fw-bold"><?php echo htmlspecialchars($item['product_name']); ?></h6>
-                                <small class="text-muted">Qty: <?php echo $item['quantity']; ?></small>
+                                <h6 class="mb-0 fw-bold text-white"><?php echo htmlspecialchars($item['product_name']); ?></h6>
+                                <small class="text-secondary">Qty: <?php echo $item['quantity']; ?></small>
                             </div>
                             <span class="fw-bold"><?php echo ($currency == 'USD') ? '$ ' . number_format($item_price * $item['quantity'], 2) : 'Rs. ' . number_format($item_price * $item['quantity'], 2); ?></span>
                         </li>
@@ -202,18 +278,18 @@ include 'includes/header.php';
                     </ul>
 
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Subtotal</span>
-                        <span class="fw-bold" id="subtotalDisplay" data-subtotal="<?php echo $subtotal; ?>"><?php echo ($currency == 'USD') ? '$ ' . number_format($subtotal, 2) : 'Rs. ' . number_format($subtotal, 2); ?></span>
+                        <span class="text-secondary">Subtotal</span>
+                        <span class="fw-bold text-white" id="subtotalDisplay" data-subtotal="<?php echo $subtotal; ?>"><?php echo ($currency == 'USD') ? '$ ' . number_format($subtotal, 2) : 'Rs. ' . number_format($subtotal, 2); ?></span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Shipping Cost</span>
+                        <span class="text-secondary">Shipping Cost</span>
                         <span class="fw-bold text-success" id="shippingDisplay">Select Country</span>
                     </div>
                     <div class="d-flex justify-content-between mb-3" id="giftRow" style="display: none;">
-                        <span class="text-muted">Gift Wrapping Fee</span>
+                        <span class="text-secondary">Gift Wrapping Fee</span>
                         <span class="fw-bold text-success" id="giftDisplay" data-gift-fee="<?php echo $default_gift_fee; ?>"><?php echo ($currency == 'USD') ? '$ 2.50' : 'Rs. 700.00'; ?></span>
                     </div>
-                    <hr>
+                    <hr class="border-secondary border-opacity-25">
                     <div class="d-flex justify-content-between mb-4 fs-5 fw-bold text-success">
                         <span>Total Amount</span>
                         <span id="totalDisplay"><?php echo ($currency == 'USD') ? '$ ' . number_format($subtotal, 2) : 'Rs. ' . number_format($subtotal, 2); ?></span>

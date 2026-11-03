@@ -41,7 +41,9 @@ if (isset($_POST['add_to_cart'])) {
         }
     }
 
-    header("Location: cart.php");
+    // Cart එකට එකතු වූ පසු cart.php වෙත නොගොස්, පරිශීලකයා සිටි පිටුවටම (index හෝ shop වෙත) නැවත යැවීම
+    $redirect_url = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : 'index.php';
+    header("Location: " . $redirect_url);
     exit();
 }
 

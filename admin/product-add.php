@@ -1,11 +1,22 @@
 <?php
 session_start();
 require_once '../config/db.php';
+date_default_timezone_set('Asia/Colombo');
 
+// Check if admin is logged in
 if (!isset($_SESSION['admin_logged'])) {
     header("Location: login.php");
     exit();
 }
+
+$current_admin_id = $_SESSION['admin_id'];
+
+// Check if the logged-in admin is a Super Admin
+$role_stmt = $conn->prepare("SELECT role, username FROM admins WHERE admin_id = ?");
+$role_stmt->bind_param("i", $current_admin_id);
+$role_stmt->execute();
+$current_admin = $role_stmt->get_result()->fetch_assoc();
+$is_super_admin = ($current_admin && $current_admin['role'] === 'Super Admin');
 
 $success = '';
 $error = '';
@@ -62,34 +73,59 @@ if (isset($_POST['add_product'])) {
         }
     }
 
-    // 3. Handle Image Upload
+    $upload_dir = '../assets/images/products/';
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+    }
+
+    // 3. Handle Main Image Upload
+    $db_image_path = "";
     if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] == 0) {
         $image_name = $_FILES['main_image']['name'];
         $image_tmp = $_FILES['main_image']['tmp_name'];
-        $upload_dir = '../assets/images/products/';
-
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0777, true);
-        }
-
-        $new_image_name = time() . '_' . basename($image_name);
+        $new_image_name = time() . '_main_' . basename($image_name);
         $target_path = $upload_dir . $new_image_name;
         $db_image_path = 'assets/images/products/' . $new_image_name;
 
-        if (move_uploaded_file($image_tmp, $target_path)) {
-            $stmt = $conn->prepare("INSERT INTO products (category_id, artisan_id, product_name, description, price_lkr, price_usd, stock_quantity, main_image, is_biodegradable, is_recyclable, is_customizable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("iissddisiii", $category_id, $artisan_id, $product_name, $description, $price_lkr, $price_usd, $stock_quantity, $db_image_path, $is_biodegradable, $is_recyclable, $is_customizable);
-            
-            if ($stmt->execute()) {
-                $success = "New handcrafted product added successfully!";
-            } else {
-                $error = "Database Error: " . $conn->error;
-            }
-        } else {
-            $error = "Failed to upload product image.";
+        if (!move_uploaded_file($image_tmp, $target_path)) {
+            $error = "Failed to upload main product image.";
         }
     } else {
         $error = "Please upload a main product image.";
+    }
+
+    if (empty($error)) {
+        // Insert Product into Database
+        $stmt = $conn->prepare("INSERT INTO products (category_id, artisan_id, product_name, description, price_lkr, price_usd, stock_quantity, main_image, is_biodegradable, is_recyclable, is_customizable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("iissddisiii", $category_id, $artisan_id, $product_name, $description, $price_lkr, $price_usd, $stock_quantity, $db_image_path, $is_biodegradable, $is_recyclable, $is_customizable);
+        
+        if ($stmt->execute()) {
+            $product_id = $stmt->insert_id;
+
+            // 4. Handle Multiple Gallery Images (Angle Images) Upload
+            if (isset($_FILES['gallery_images'])) {
+                $file_count = count($_FILES['gallery_images']['name']);
+                for ($i = 0; $i < $file_count; $i++) {
+                    if ($_FILES['gallery_images']['error'][$i] == 0) {
+                        $gal_name = $_FILES['gallery_images']['name'][$i];
+                        $gal_tmp = $_FILES['gallery_images']['tmp_name'][$i];
+                        $new_gal_name = time() . '_gal_' . $i . '_' . basename($gal_name);
+                        $gal_target = $upload_dir . $new_gal_name;
+                        $db_gal_path = 'assets/images/products/' . $new_gal_name;
+
+                        if (move_uploaded_file($gal_tmp, $gal_target)) {
+                            $img_stmt = $conn->prepare("INSERT INTO product_images (product_id, image_path) VALUES (?, ?)");
+                            $img_stmt->bind_param("is", $product_id, $db_gal_path);
+                            $img_stmt->execute();
+                        }
+                    }
+                }
+            }
+
+            $success = "New handcrafted product and gallery images added successfully!";
+        } else {
+            $error = "Database Error: " . $conn->error;
+        }
     }
 }
 ?>
@@ -99,7 +135,7 @@ if (isset($_POST['add_product'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Product - Admin Dark Portal</title>
+    <title>Add Product - CraftedCeylon Admin</title>
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
@@ -109,32 +145,35 @@ if (isset($_POST['add_product'])) {
     
     <style>
         :root {
-            --bg-dark: #121216;
-            --bg-card: #1e1e2f;
-            --bg-sidebar: #161622;
+            --bg-dark: #0d0d12;
+            --bg-card: rgba(26, 26, 40, 0.85);
+            --bg-sidebar: #13131d;
             --text-main: #ffffff;
-            --text-sub: #adb5bd;
+            --text-sub: #a0aec0;
             --accent-green: #198754;
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
         body {
             background-color: var(--bg-dark);
+            background-image: linear-gradient(135deg, rgba(13, 13, 18, 0.95), rgba(20, 30, 25, 0.9)), 
+                              radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
+            background-attachment: fixed;
             color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
         }
 
-        /* Sidebar Styling */
         .sidebar {
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
         }
 
         .nav-link {
             color: var(--text-sub);
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 12px 16px;
             font-weight: 500;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -149,30 +188,28 @@ if (isset($_POST['add_product'])) {
         .nav-link.active {
             background: linear-gradient(135deg, #198754 0%, #146c43 100%);
             color: #ffffff !important;
-            box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+            box-shadow: 0 4px 20px rgba(25, 135, 84, 0.35);
         }
 
-        /* Glassmorphism Dark Card */
         .dark-card {
-            background: rgba(30, 30, 47, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+            border-radius: 18px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
         }
 
-        /* Form Inputs & Controls Styling */
         .form-control, .form-select {
-            background-color: #161622;
+            background-color: rgba(18, 18, 22, 0.8);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 10px 14px;
         }
 
         .form-control:focus, .form-select:focus {
-            background-color: #161622;
+            background-color: rgba(18, 18, 22, 0.95);
             border-color: var(--accent-green);
             color: var(--text-main);
             box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
@@ -182,9 +219,8 @@ if (isset($_POST['add_product'])) {
             color: #6c757d;
         }
 
-        /* Form Check / Checkboxes */
         .form-check-input {
-            background-color: #161622;
+            background-color: rgba(18, 18, 22, 0.8);
             border-color: var(--border-color);
         }
 
@@ -194,7 +230,7 @@ if (isset($_POST['add_product'])) {
         }
 
         .glow-success {
-            box-shadow: 0 0 15px rgba(25, 135, 84, 0.2);
+            box-shadow: 0 0 20px rgba(25, 135, 84, 0.3);
         }
     </style>
 </head>
@@ -210,36 +246,16 @@ if (isset($_POST['add_product'])) {
                     <h5 class="fw-bold text-white mb-0">CraftedCeylon</h5>
                 </div>
                 <ul class="nav flex-column gap-2">
-                    <li class="nav-item">
-                        <a href="dashboard.php" class="nav-link">
-                            <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="products.php" class="nav-link active">
-                            <i class="bi bi-box-seam me-2"></i> Products
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="orders.php" class="nav-link">
-                            <i class="bi bi-cart-check me-2"></i> Orders & Tracking
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="inventory.php" class="nav-link">
-                            <i class="bi bi-stack me-2"></i> Inventory Stock
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="customers.php" class="nav-link">
-                            <i class="bi bi-people me-2"></i> Customers
-                        </a>
-                    </li>
-                    <li class="nav-item mt-5">
-                        <a href="logout.php" class="nav-link text-danger">
-                            <i class="bi bi-box-arrow-right me-2"></i> Logout
-                        </a>
-                    </li>
+                    <li class="nav-item"><a href="dashboard.php" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                    <li class="nav-item"><a href="products.php" class="nav-link active"><i class="bi bi-box-seam me-2"></i> Products</a></li>
+                    <li class="nav-item"><a href="orders.php" class="nav-link"><i class="bi bi-cart-check me-2"></i> Orders & Tracking</a></li>
+                    <li class="nav-item"><a href="inventory.php" class="nav-link"><i class="bi bi-stack me-2"></i> Inventory Stock</a></li>
+                    <li class="nav-item"><a href="customers.php" class="nav-link"><i class="bi bi-people me-2"></i> Customers</a></li>
+                    <li class="nav-item"><a href="reviews.php" class="nav-link"><i class="bi bi-star-half me-2"></i> Customer Reviews</a></li>
+                    <?php if ($is_super_admin): ?>
+                    <li class="nav-item"><a href="manage-admins.php" class="nav-link text-warning"><i class="bi bi-shield-lock-fill me-2"></i> Manage Admins</a></li>
+                    <?php endif; ?>
+                    <li class="nav-item mt-5"><a href="logout.php" class="nav-link text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
                 </ul>
             </div>
 
@@ -315,9 +331,16 @@ if (isset($_POST['add_product'])) {
                                 <input type="number" name="stock_quantity" class="form-control" required placeholder="Available units">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold small text-light">Main Product Image</label>
+                                <label class="form-label fw-bold small text-light">Main Cover Image</label>
                                 <input type="file" name="main_image" class="form-control" required accept="image/*">
                             </div>
+                        </div>
+
+                        <!-- Multiple Gallery Images for Angles -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-light">Additional Angle Images (Multiple Select)</label>
+                            <input type="file" name="gallery_images[]" class="form-control" multiple accept="image/*">
+                            <small class="text-secondary">You can select multiple images at once (Ctrl + Click or drag-select) to show different angles of the product.</small>
                         </div>
 
                         <div class="mb-3">

@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/db.php';
+date_default_timezone_set('Asia/Colombo');
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin_logged'])) {
@@ -8,9 +9,18 @@ if (!isset($_SESSION['admin_logged'])) {
     exit();
 }
 
+$current_admin_id = $_SESSION['admin_id'];
+
+// Check if the logged-in admin is a Super Admin
+$role_stmt = $conn->prepare("SELECT role, username FROM admins WHERE admin_id = ?");
+$role_stmt->bind_param("i", $current_admin_id);
+$role_stmt->execute();
+$current_admin = $role_stmt->get_result()->fetch_assoc();
+$is_super_admin = ($current_admin && $current_admin['role'] === 'Super Admin');
+
 $message = '';
 
-// Handle Stock Quantity Quick Update
+// Handle Stock Quantity Quick Update (Available for Admin & Super Admin)
 if (isset($_POST['update_stock'])) {
     $product_id = intval($_POST['product_id']);
     $new_stock = intval($_POST['stock_quantity']);
@@ -45,7 +55,7 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory Stock - Admin Dark Portal</title>
+    <title>Inventory Stock - CraftedCeylon Admin</title>
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
@@ -55,17 +65,22 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
     
     <style>
         :root {
-            --bg-dark: #121216;
-            --bg-card: #1e1e2f;
-            --bg-sidebar: #161622;
+            --bg-dark: #0d0d12;
+            --bg-card: rgba(26, 26, 40, 0.85);
+            --bg-sidebar: #13131d;
             --text-main: #ffffff;
-            --text-sub: #adb5bd;
+            --text-sub: #a0aec0;
             --accent-green: #198754;
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
         body {
             background-color: var(--bg-dark);
+            /* Creative Background Pattern with Subtle Gradient Overlay */
+            background-image: linear-gradient(135deg, rgba(13, 13, 18, 0.95), rgba(20, 30, 25, 0.9)), 
+                              radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
+            background-attachment: fixed;
             color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
@@ -75,12 +90,12 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
         .sidebar {
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
         }
 
         .nav-link {
             color: var(--text-sub);
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 12px 16px;
             font-weight: 500;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -95,17 +110,17 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
         .nav-link.active {
             background: linear-gradient(135deg, #198754 0%, #146c43 100%);
             color: #ffffff !important;
-            box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+            box-shadow: 0 4px 20px rgba(25, 135, 84, 0.35);
         }
 
         /* Glassmorphism Dark Card */
         .dark-card {
-            background: rgba(30, 30, 47, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+            border-radius: 18px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
         }
 
         /* High-Contrast Table Styling */
@@ -123,7 +138,7 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
             letter-spacing: 0.8px;
             padding: 16px 20px;
             border-bottom: 2px solid var(--border-color);
-            background-color: rgba(22, 22, 34, 0.5);
+            background-color: rgba(19, 19, 29, 0.7);
         }
 
         .table-dark-custom td {
@@ -138,27 +153,27 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
         }
 
         .table-dark-custom tbody tr:hover {
-            background-color: rgba(255, 255, 255, 0.03);
+            background-color: rgba(255, 255, 255, 0.04);
         }
 
         /* Form Inputs Styling */
         .form-control, .form-select {
-            background-color: #121216;
+            background-color: rgba(18, 18, 22, 0.8);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            border-radius: 8px;
-            padding: 8px 12px;
+            border-radius: 10px;
+            padding: 9px 14px;
         }
 
         .form-control:focus, .form-select:focus {
-            background-color: #121216;
+            background-color: rgba(18, 18, 22, 0.95);
             border-color: var(--accent-green);
             color: var(--text-main);
             box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
         }
 
         .glow-success {
-            box-shadow: 0 0 15px rgba(25, 135, 84, 0.2);
+            box-shadow: 0 0 20px rgba(25, 135, 84, 0.3);
         }
     </style>
 </head>
@@ -199,6 +214,18 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
                             <i class="bi bi-people me-2"></i> Customers
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="reviews.php" class="nav-link">
+                            <i class="bi bi-star-half me-2"></i> Customer Reviews
+                        </a>
+                    </li>
+                    <?php if ($is_super_admin): ?>
+                    <li class="nav-item">
+                        <a href="manage-admins.php" class="nav-link text-warning">
+                            <i class="bi bi-shield-lock-fill me-2"></i> Manage Admins
+                        </a>
+                    </li>
+                    <?php endif; ?>
                     <li class="nav-item mt-5">
                         <a href="logout.php" class="nav-link text-danger">
                             <i class="bi bi-box-arrow-right me-2"></i> Logout

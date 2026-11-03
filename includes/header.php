@@ -4,6 +4,28 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Database Connection inclusion (ගිණුමේ තත්ත්වය පරීක්ෂා කිරීමට අත්‍යවශ්‍යයි)
+require_once 'config/db.php'; 
+
+// පාරිභෝගිකයා ලොග් වී ඇත්නම්, ඔහුගේ ගිණුම Block කර ඇද්දැයි ක්ෂණිකව පරීක්ෂා කිරීම
+if (isset($_SESSION['user_id']) && isset($conn)) {
+    $check_user_id = $_SESSION['user_id'];
+    $status_check_stmt = $conn->prepare("SELECT account_status FROM users WHERE user_id = ?");
+    if ($status_check_stmt) {
+        $status_check_stmt->bind_param("i", $check_user_id);
+        $status_check_stmt->execute();
+        $status_res = $status_check_stmt->get_result()->fetch_assoc();
+        
+        // ගිණුම Block කර ඇත්නම් සියලුම sessions ඉවත් කර login පිටුවට යැවීම
+        if ($status_res && isset($status_res['account_status']) && $status_res['account_status'] === 'Blocked') {
+            session_unset();
+            session_destroy();
+            header("Location: login.php?error=account_blocked");
+            exit();
+        }
+    }
+}
+
 // Global Price Formatting Function with Live Exchange Rate Integration
 if (!function_exists('formatPrice')) {
     function formatPrice($price_in_lkr) {
@@ -45,6 +67,14 @@ if (!function_exists('formatPrice')) {
     <!-- Bootstrap Icons CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     
+    <!-- Instant Theme Loader Script (පිටුව Load වීමටත් පෙර Theme එක Apply කර Flash වීම වැළැක්වීමට) -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        })();
+    </script>
+
     <!-- Custom CSS for Dark Mode & Styling -->
     <style>
         :root {
@@ -85,7 +115,7 @@ if (!function_exists('formatPrice')) {
         }
     </style>
 </head>
-<body data-bs-theme="light">
+<body>
 
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg shadow-sm sticky-top">
@@ -170,34 +200,39 @@ if (!function_exists('formatPrice')) {
     <!-- Dark Mode Script -->
     <script>
         function toggleDarkMode() {
-            const body = document.body;
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
             const themeIcon = document.getElementById('themeIcon');
             const themeText = document.getElementById('themeText');
 
-            if (body.getAttribute('data-bs-theme') === 'light') {
-                body.setAttribute('data-bs-theme', 'dark');
-                themeIcon.classList.replace('bi-moon-fill', 'bi-sun-fill');
-                themeText.innerText = 'Light';
+            if (currentTheme === 'light') {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+                if (themeIcon) themeIcon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+                if (themeText) themeText.innerText = 'Light';
                 localStorage.setItem('theme', 'dark');
             } else {
-                body.setAttribute('data-bs-theme', 'light');
-                themeIcon.classList.replace('bi-sun-fill', 'bi-moon-fill');
-                themeText.innerText = 'Dark';
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+                if (themeIcon) themeIcon.classList.replace('bi-sun-fill', 'bi-moon-fill');
+                if (themeText) themeText.innerText = 'Dark';
                 localStorage.setItem('theme', 'light');
             }
         }
 
-        // Preserve theme on page reload
-        window.onload = function() {
-            const savedTheme = localStorage.getItem('theme');
+        // Synchronize button states on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+
             if (savedTheme === 'dark') {
-                document.body.setAttribute('data-bs-theme', 'dark');
-                if (document.getElementById('themeIcon')) {
-                    document.getElementById('themeIcon').classList.replace('bi-moon-fill', 'bi-sun-fill');
-                    document.getElementById('themeText').innerText = 'Light';
-                }
+                if (themeIcon) themeIcon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+                if (themeText) themeText.innerText = 'Light';
+            } else {
+                if (themeIcon) themeIcon.classList.replace('bi-sun-fill', 'bi-moon-fill');
+                if (themeText) themeText.innerText = 'Dark';
             }
-        };
+        });
     </script>
 </body>
 </html>

@@ -81,43 +81,89 @@ if (isset($_POST['register'])) {
 include 'includes/header.php';
 ?>
 
+<!-- Creative Blurred Background & Dark Styling -->
+<style>
+    body {
+        position: relative;
+        background-color: #0d0d12;
+        color: #ffffff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url('assets/images/cover.jpg');
+        background-size: cover;
+        background-position: center;
+        filter: blur(20px) brightness(0.35);
+        z-index: -1;
+    }
+
+    .dark-glass-card {
+        background: rgba(26, 26, 40, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+        color: #ffffff;
+    }
+
+    .form-control {
+        background-color: rgba(18, 18, 22, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        border-radius: 10px;
+    }
+    .form-control:focus {
+        background-color: rgba(18, 18, 22, 0.95);
+        border-color: #198754;
+        color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+    }
+</style>
+
 <!-- HTML Form -->
 <div class="container my-5">
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5">
-            <div class="card border-0 shadow-sm rounded-4 p-4">
+            <div class="dark-glass-card p-4">
                 <div class="text-center mb-4">
-                    <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                    <div class="bg-success bg-opacity-25 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2 shadow-sm" style="width: 60px; height: 60px; font-size: 1.5rem;">
                         <i class="bi bi-person-plus"></i>
                     </div>
-                    <h3 class="fw-bold">Create Account</h3>
-                    <p class="text-muted small">Join CraftedCeylon to explore authentic handmade products.</p>
+                    <h3 class="fw-bold text-white">Create Account</h3>
+                    <p class="text-secondary small">Join CraftedCeylon to explore authentic handmade products.</p>
                 </div>
 
                 <?php if(!empty($error)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show small" role="alert">
+                    <div class="alert alert-danger bg-danger text-white border-0 shadow-sm alert-dismissible fade show small" role="alert">
                         <i class="bi bi-exclamation-triangle me-1"></i> <?php echo $error; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
 
                 <form action="register.php" method="POST">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small">Full Name</label>
+                        <label class="form-label fw-semibold small text-secondary">Full Name</label>
                         <input type="text" name="full_name" class="form-control" required placeholder="Enter your full name">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small">Email Address</label>
+                        <label class="form-label fw-semibold small text-secondary">Email Address</label>
                         <input type="email" name="email" class="form-control" required placeholder="name@example.com">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small">Password</label>
+                        <label class="form-label fw-semibold small text-secondary">Password</label>
                         <input type="password" name="password" class="form-control" required placeholder="Create a strong password">
                     </div>
-                    <button type="submit" name="register" class="btn btn-success w-100 fw-bold py-2 mb-3">
+                    <button type="submit" name="register" class="btn btn-success w-100 fw-bold py-2 mb-3 shadow-sm">
                         <i class="bi bi-person-check me-1"></i> Register & Send OTP
                     </button>
-                    <div class="text-center small text-muted">
+                    <div class="text-center small text-secondary">
                         Already have an account? <a href="login.php" class="text-success fw-semibold text-decoration-none">Log in here</a>
                     </div>
                 </form>

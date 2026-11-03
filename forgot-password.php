@@ -202,22 +202,68 @@ if (isset($_POST['resend_otp'])) {
 include 'includes/header.php';
 ?>
 
+<!-- Creative Blurred Background & Dark Styling -->
+<style>
+    body {
+        position: relative;
+        background-color: #0d0d12;
+        color: #ffffff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url('assets/images/cover.jpg');
+        background-size: cover;
+        background-position: center;
+        filter: blur(20px) brightness(0.35);
+        z-index: -1;
+    }
+
+    .dark-glass-card {
+        background: rgba(26, 26, 40, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+        color: #ffffff;
+    }
+
+    .form-control {
+        background-color: rgba(18, 18, 22, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        border-radius: 10px;
+    }
+    .form-control:focus {
+        background-color: rgba(18, 18, 22, 0.95);
+        border-color: #198754;
+        color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+    }
+</style>
+
 <div class="container my-5" style="max-width: 500px;">
-    <div class="card shadow-sm border p-4">
+    <div class="dark-glass-card p-4">
         <h3 class="fw-bold text-success mb-3 text-center"><i class="bi bi-key"></i> Forgot Password</h3>
-        <p class="text-muted text-center small mb-4">Recover your account securely using step-by-step OTP verification.</p>
+        <p class="text-secondary text-center small mb-4">Recover your account securely using step-by-step OTP verification.</p>
 
         <?php if (!empty($msg)): ?>
-            <div class="alert alert-success alert-dismissible fade show small" role="alert">
+            <div class="alert alert-success bg-success bg-opacity-25 text-success border border-success alert-dismissible fade show small" role="alert">
                 <i class="bi bi-check-circle me-1"></i> <?php echo $msg; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
-            <div class="alert alert-danger alert-dismissible fade show small" role="alert">
+            <div class="alert alert-danger bg-danger text-white border-0 shadow-sm alert-dismissible fade show small" role="alert">
                 <i class="bi bi-exclamation-triangle me-1"></i> <?php echo $error; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
 
@@ -225,10 +271,10 @@ include 'includes/header.php';
             <!-- Step 1: Enter Email Form -->
             <form action="forgot-password.php" method="POST">
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Enter Your Registered Email</label>
+                    <label class="form-label small fw-bold text-secondary">Enter Your Registered Email</label>
                     <input type="email" name="email" class="form-control" required placeholder="name@example.com">
                 </div>
-                <button type="submit" name="send_otp" class="btn btn-success w-100 fw-bold py-2">
+                <button type="submit" name="send_otp" class="btn btn-success w-100 fw-bold py-2 shadow-sm">
                     <i class="bi bi-send me-1"></i> Send OTP Code
                 </button>
             </form>
@@ -237,17 +283,17 @@ include 'includes/header.php';
             <!-- Step 2: Enter OTP Form -->
             <form action="forgot-password.php" method="POST" class="mb-3">
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Enter 6-digit OTP Code</label>
+                    <label class="form-label small fw-bold text-secondary">Enter 6-digit OTP Code</label>
                     <input type="text" name="otp" class="form-control text-center fs-4 tracking-widest" maxlength="6" required placeholder="123456">
                 </div>
-                <button type="submit" name="verify_otp" class="btn btn-success w-100 fw-bold py-2">
+                <button type="submit" name="verify_otp" class="btn btn-success w-100 fw-bold py-2 shadow-sm">
                     <i class="bi bi-check-circle me-1"></i> Verify OTP
                 </button>
             </form>
 
             <!-- Resend OTP Form Option -->
             <form action="forgot-password.php" method="POST" class="text-center mt-2">
-                <p class="text-muted small mb-1">Didn't receive the OTP code?</p>
+                <p class="text-secondary small mb-1">Didn't receive the OTP code?</p>
                 <button type="submit" name="resend_otp" class="btn btn-link text-success text-decoration-none fw-bold p-0 small">
                     <i class="bi bi-arrow-clockwise me-1"></i> Resend OTP Code
                 </button>
@@ -257,22 +303,22 @@ include 'includes/header.php';
             <!-- Step 3: Enter New Password with Show/Hide Option -->
             <form action="forgot-password.php" method="POST">
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">New Password</label>
+                    <label class="form-label small fw-bold text-secondary">New Password</label>
                     <div class="input-group">
-                        <input type="password" name="new_password" id="newPassword" class="form-control" required placeholder="Enter new password">
-                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                        <input type="password" name="new_password" id="newPassword" class="form-control border-end-0" required placeholder="Enter new password">
+                        <button class="btn btn-outline-secondary text-secondary" type="button" id="togglePassword" style="background-color: rgba(18, 18, 22, 0.9); border-color: rgba(255, 255, 255, 0.1);">
                             <i class="bi bi-eye" id="eyeIcon"></i>
                         </button>
                     </div>
                 </div>
-                <button type="submit" name="reset_password" class="btn btn-success w-100 fw-bold py-2">
+                <button type="submit" name="reset_password" class="btn btn-success w-100 fw-bold py-2 shadow-sm">
                     <i class="bi bi-shield-lock me-1"></i> Reset Password
                 </button>
             </form>
         <?php endif; ?>
 
-        <div class="text-center mt-4 border-top pt-3">
-            <a href="login.php" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left"></i> Back to Login</a>
+        <div class="text-center mt-4 border-top border-secondary border-opacity-25 pt-3">
+            <a href="login.php" class="text-decoration-none text-secondary small"><i class="bi bi-arrow-left"></i> Back to Login</a>
         </div>
     </div>
 </div>
