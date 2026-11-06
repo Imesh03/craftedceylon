@@ -78,14 +78,16 @@ if ($wishlist_stmt) {
 include 'includes/header.php';
 ?>
 
-<!-- Creative Blurred Background & Dark Styling -->
+<!-- Creative Blurred Background & Sticky Navigation & Scrollable Containers Styling -->
 <style>
     body {
         position: relative;
-        background-color: #0d0d12;
-        color: #ffffff;
+        background-color: var(--bg-dark, #0d0d12);
+        color: var(--text-main, #ffffff);
         font-family: 'Plus Jakarta Sans', sans-serif;
     }
+
+    /* cover.jpg Background restored with Blur & Brightness */
     body::before {
         content: "";
         position: fixed;
@@ -101,25 +103,72 @@ include 'includes/header.php';
     }
 
     .dark-glass-card {
-        background: rgba(26, 26, 40, 0.85);
+        background: var(--bg-card, rgba(26, 26, 40, 0.85));
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 18px;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
-        color: #ffffff;
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+        border-radius: 16px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+        color: var(--text-main, #ffffff);
+        transition: all 0.3s ease;
     }
 
-    .form-control {
-        background-color: rgba(18, 18, 22, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #ffffff;
-        border-radius: 10px;
+    /* Sticky Sidebar Navigation Fix */
+    .sticky-sidebar {
+        position: sticky;
+        top: 100px;
     }
-    .form-control:focus {
-        background-color: rgba(18, 18, 22, 0.95);
+
+    /* Scrollable Containers for Orders & Wishlist to prevent footer stretching */
+    .scrollable-orders-box {
+        max-height: 520px;
+        overflow-y: auto;
+        padding-right: 5px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(25, 135, 84, 0.5) rgba(255, 255, 255, 0.05);
+    }
+    .scrollable-orders-box::-webkit-scrollbar {
+        width: 6px;
+    }
+    .scrollable-orders-box::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
+    .scrollable-orders-box::-webkit-scrollbar-thumb {
+        background: rgba(25, 135, 84, 0.6);
+        border-radius: 4px;
+    }
+
+    .scrollable-wishlist-box {
+        max-height: 520px;
+        overflow-y: auto;
+        padding-right: 5px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(25, 135, 84, 0.5) rgba(255, 255, 255, 0.05);
+    }
+    .scrollable-wishlist-box::-webkit-scrollbar {
+        width: 6px;
+    }
+    .scrollable-wishlist-box::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
+    .scrollable-wishlist-box::-webkit-scrollbar-thumb {
+        background: rgba(25, 135, 84, 0.6);
+        border-radius: 4px;
+    }
+
+    .form-control, .form-select {
+        background-color: var(--bg-card, rgba(18, 18, 22, 0.85));
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+        color: var(--text-main, #ffffff);
+        border-radius: 10px;
+        font-size: 13px;
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: var(--bg-card, rgba(18, 18, 22, 0.95));
         border-color: #198754;
-        color: #ffffff;
+        color: var(--text-main, #ffffff);
         box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
     }
 
@@ -145,6 +194,9 @@ include 'includes/header.php';
     .table thead {
         background-color: rgba(18, 18, 22, 0.9) !important;
         color: #ffffff;
+        position: sticky;
+        top: 0;
+        z-index: 5;
     }
     .table td, .table th {
         border-color: rgba(255, 255, 255, 0.08);
@@ -155,9 +207,9 @@ include 'includes/header.php';
 
 <div class="container my-5">
     <div class="row">
-        <!-- Sidebar Navigation -->
+        <!-- Sidebar Navigation (Fixed Sticky Position) -->
         <div class="col-md-4 col-lg-3 mb-4">
-            <div class="dark-glass-card p-4 text-center">
+            <div class="dark-glass-card p-4 text-center sticky-sidebar">
                 <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow-sm" style="width: 70px; height: 70px; font-size: 1.8rem;">
                     <i class="bi bi-person"></i>
                 </div>
@@ -207,7 +259,7 @@ include 'includes/header.php';
                         <h4 class="fw-bold text-success mb-4"><i class="bi bi-box-seam me-2"></i>Order History & Tracking</h4>
 
                         <?php if ($orders_result && $orders_result->num_rows > 0): ?>
-                            <div class="table-responsive">
+                            <div class="table-responsive scrollable-orders-box">
                                 <table class="table align-middle">
                                     <thead>
                                         <tr>
@@ -296,26 +348,28 @@ include 'includes/header.php';
                         <h4 class="fw-bold text-success mb-4"><i class="bi bi-heart-fill me-2"></i>My Saved Wishlist</h4>
 
                         <?php if ($wishlist_result && $wishlist_result->num_rows > 0): ?>
-                            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-                                <?php while($wish = $wishlist_result->fetch_assoc()): ?>
-                                    <div class="col">
-                                        <div class="dark-glass-card h-100 d-flex flex-column p-3 border border-secondary border-opacity-25">
-                                            <div class="rounded overflow-hidden mb-3">
-                                                <img src="<?php echo htmlspecialchars($wish['main_image']); ?>" class="w-100 rounded" alt="Product Image" style="height: 150px; object-fit: cover;">
-                                            </div>
-                                            <div class="card-body d-flex flex-column p-0 flex-grow-1">
-                                                <h6 class="fw-bold mb-1 text-white text-truncate"><?php echo htmlspecialchars($wish['product_name']); ?></h6>
-                                                <p class="text-success fw-bold small mb-3">
-                                                    <?php echo function_exists('formatPrice') ? formatPrice($wish['price_lkr']) : 'Rs. ' . number_format($wish['price_lkr'], 2); ?>
-                                                </p>
-                                                <div class="mt-auto d-flex gap-2 pt-2 border-top border-secondary border-opacity-25">
-                                                    <a href="product-detail.php?id=<?php echo $wish['product_id']; ?>" class="btn btn-outline-success btn-sm w-100 fw-bold">View</a>
-                                                    <a href="account.php?remove_wishlist=<?php echo $wish['wishlist_id']; ?>" class="btn btn-outline-danger btn-sm px-2" title="Remove"><i class="bi bi-trash"></i></a>
+                            <div class="scrollable-wishlist-box">
+                                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 pe-2">
+                                    <?php while($wish = $wishlist_result->fetch_assoc()): ?>
+                                        <div class="col">
+                                            <div class="dark-glass-card h-100 d-flex flex-column p-3 border border-secondary border-opacity-25">
+                                                <div class="rounded overflow-hidden mb-3">
+                                                    <img src="<?php echo htmlspecialchars($wish['main_image']); ?>" class="w-100 rounded" alt="Product Image" style="height: 150px; object-fit: cover;">
+                                                </div>
+                                                <div class="card-body d-flex flex-column p-0 flex-grow-1">
+                                                    <h6 class="fw-bold mb-1 text-white text-truncate"><?php echo htmlspecialchars($wish['product_name']); ?></h6>
+                                                    <p class="text-success fw-bold small mb-3">
+                                                        <?php echo function_exists('formatPrice') ? formatPrice($wish['price_lkr']) : 'Rs. ' . number_format($wish['price_lkr'], 2); ?>
+                                                    </p>
+                                                    <div class="mt-auto d-flex gap-2 pt-2 border-top border-secondary border-opacity-25">
+                                                        <a href="product-detail.php?id=<?php echo $wish['product_id']; ?>" class="btn btn-outline-success btn-sm w-100 fw-bold">View</a>
+                                                        <a href="account.php?remove_wishlist=<?php echo $wish['wishlist_id']; ?>" class="btn btn-outline-danger btn-sm px-2" title="Remove"><i class="bi bi-trash"></i></a>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                <?php endwhile; ?>
+                                    <?php endwhile; ?>
+                                </div>
                             </div>
                         <?php else: ?>
                             <div class="text-center py-5 text-secondary">

@@ -28,31 +28,61 @@ if (isset($_POST['update_status'])) {
     $stmt->bind_param("ssi", $new_status, $tracking_number, $order_id);
     $stmt->execute();
     
-    // Preserve search query on redirect if active
-    $redirect_url = "orders.php";
+    // Preserve search query & date filters on redirect if active
+    $redirect_url = "orders.php?";
+    $params = [];
     if (isset($_POST['current_search']) && !empty($_POST['current_search'])) {
-        $redirect_url .= "?search=" . urlencode($_POST['current_search']);
+        $params['search'] = $_POST['current_search'];
     }
+    if (isset($_POST['current_from']) && !empty($_POST['current_from'])) {
+        $params['from_date'] = $_POST['current_from'];
+    }
+    if (isset($_POST['current_to']) && !empty($_POST['current_to'])) {
+        $params['to_date'] = $_POST['current_to'];
+    }
+    
+    if (!empty($params)) {
+        $redirect_url .= http_build_query($params);
+    } else {
+        $redirect_url = "orders.php";
+    }
+    
     header("Location: " . $redirect_url);
     exit();
 }
 
 // -------------------------------------------------------------------------
-// SEARCH LOGIC: 
+// SEARCH & DATE FILTER LOGIC: 
 // -------------------------------------------------------------------------
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
+$from_date = isset($_GET['from_date']) ? trim($_GET['from_date']) : '';
+$to_date = isset($_GET['to_date']) ? trim($_GET['to_date']) : '';
 
 // මූලික SQL විමසුම
 $sql = "SELECT * FROM orders WHERE 1=1";
 
+// Search query filter
 if (!empty($search_query)) {
     $escaped_search = $conn->real_escape_string($search_query);
     $sql .= " AND (order_reference LIKE '%$escaped_search%' 
                 OR shipping_name LIKE '%$escaped_search%' 
                 OR shipping_phone LIKE '%$escaped_search%')";
 } else {
-    // Search එකක් කර නැති නම් පමණක් Delivered සහ Cancelled නොවන Orders පෙන්වයි
-    $sql .= " AND order_status NOT IN ('Delivered', 'Cancelled')";
+    // Search එකක් කර නැති නම් පමණක් Delivered සහ Cancelled නොවන Orders පෙන්වයි (Date filter එකක් දී තිබේ නම් හැර)
+    if (empty($from_date) && empty($to_date)) {
+        $sql .= " AND order_status NOT IN ('Delivered', 'Cancelled')";
+    }
+}
+
+// Date Range Filter
+if (!empty($from_date)) {
+    $escaped_from = $conn->real_escape_string($from_date . " 00:00:00");
+    $sql .= " AND order_date >= '$escaped_from'";
+}
+
+if (!empty($to_date)) {
+    $escaped_to = $conn->real_escape_string($to_date . " 23:59:59");
+    $sql .= " AND order_date <= '$escaped_to'";
 }
 
 $sql .= " ORDER BY order_date DESC";
@@ -86,19 +116,39 @@ $orders_result = $conn->query($sql);
         body {
             background-color: var(--bg-dark);
             background-image: linear-gradient(135deg, rgba(13, 13, 18, 0.95), rgba(20, 30, 25, 0.9)), 
-                              radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
-                              radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
+                            radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
+                            radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
             background-attachment: fixed;
             color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
         }
 
-        /* Sidebar Styling */
+        /* Fixed Sidebar Styling */
         .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
             backdrop-filter: blur(15px);
+            overflow-y: auto;
+            z-index: 1030;
+        }
+
+        /* Main Content Offset for Fixed Sidebar */
+        .main-content-wrapper {
+            margin-left: 16.666667%; /* matches col-lg-2 width */
+        }
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                margin-left: 0;
+            }
+            .sidebar {
+                position: relative;
+                height: auto;
+            }
         }
 
         .nav-link {
@@ -181,6 +231,22 @@ $orders_result = $conn->query($sql);
             box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
         }
 
+        /* Filter Inputs Styling */
+        .filter-input {
+            background-color: rgba(18, 18, 22, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            padding: 6px 10px;
+        }
+        .filter-input:focus {
+            background-color: rgba(18, 18, 22, 0.95);
+            border-color: var(--accent-green);
+            color: var(--text-main);
+            box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+        }
+        
         /* Custom Modal Styling for Dark Theme */
         .modal {
             z-index: 1055 !important;
@@ -211,7 +277,7 @@ $orders_result = $conn->query($sql);
             box-shadow: 0 0 20px rgba(25, 135, 84, 0.3);
         }
 
-        /* Printable Invoice Styles */
+        /* Printable Single-Page Optimized Invoice Styles */
         @media print {
             body * {
                 visibility: hidden;
@@ -220,14 +286,18 @@ $orders_result = $conn->query($sql);
                 visibility: visible;
             }
             .modal.show .modal-content {
-                position: absolute;
+                position: fixed;
                 left: 0;
                 top: 0;
                 width: 100%;
+                height: 100vh;
                 background: #ffffff !important;
                 color: #000000 !important;
                 border: none !important;
                 box-shadow: none !important;
+                padding: 15px !important;
+                font-size: 10px !important;
+                overflow: hidden !important;
             }
             .modal-footer, .btn-close {
                 display: none !important;
@@ -238,15 +308,30 @@ $orders_result = $conn->query($sql);
             .item-row-card {
                 background: #f8f9fa !important;
                 border: 1px solid #ddd !important;
+                padding: 4px 8px !important;
+                margin-bottom: 3px !important;
+            }
+            h5, h6 {
+                font-size: 11px !important;
+                margin-bottom: 3px !important;
+                margin-top: 3px !important;
+            }
+            p {
+                margin-bottom: 2px !important;
+                line-height: 1.2 !important;
+            }
+            .row {
+                --bs-gutter-x: 0.5rem;
+                --bs-gutter-y: 0.2rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar min-vh-100 p-3">
+            <div class="col-md-3 col-lg-2 sidebar p-3">
                 <div class="d-flex align-items-center gap-2 mb-4 px-2">
                     <div class="bg-success text-white rounded-3 p-2 d-flex align-items-center justify-content-center glow-success">
                         <i class="bi bi-flower1 fs-4"></i>
@@ -300,21 +385,41 @@ $orders_result = $conn->query($sql);
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 p-4 p-md-5">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+            <div class="col-md-9 col-lg-10 ms-auto main-content-wrapper p-4 p-md-5">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
                     <div>
                         <h2 class="fw-bold text-white mb-1">Customer Orders & Fulfillment</h2>
-                        <p class="text-secondary small mb-0">Monitor active order statuses and assign shipment tracking numbers.</p>
+                        <p class="text-secondary small mb-0">Monitor active order statuses, assign shipment tracking numbers, and filter by date.</p>
                     </div>
 
-                    <!-- Search Form by Reference ID, Customer Name, or Phone -->
-                    <form action="orders.php" method="GET" class="d-flex gap-2" style="width: 100%; max-width: 380px;">
-                        <div class="input-group input-group-sm">
-                            <input type="text" name="search" class="form-control" placeholder="Search Ref ID, Name, Phone..." value="<?php echo htmlspecialchars($search_query); ?>">
-                            <button class="btn btn-success" type="submit"><i class="bi bi-search"></i></button>
-                            <?php if (!empty($search_query)): ?>
-                                <a href="orders.php" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
-                            <?php endif; ?>
+                    <!-- Header Action Buttons (including Report Navigation Button) -->
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="order_report.php" class="btn btn-success btn-sm fw-bold px-3 py-2 shadow-sm d-flex align-items-center gap-2" style="border-radius: 10px;">
+                            <i class="bi bi-file-earmark-bar-graph-fill fs-6"></i> View Orders Report
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Search & Date Filter Form -->
+                <div class="dark-card p-3 mb-4">
+                    <form action="orders.php" method="GET" class="row g-2 align-items-center w-100">
+                        <div class="col-12 col-md-3">
+                            <input type="date" name="from_date" class="form-control form-control-sm filter-input" value="<?php echo htmlspecialchars($from_date); ?>" title="From Date">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <input type="date" name="to_date" class="form-control form-control-sm filter-input" value="<?php echo htmlspecialchars($to_date); ?>" title="To Date">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="input-group input-group-sm">
+                                <input type="text" name="search" class="form-control filter-input" placeholder="Ref ID, Name, Phone..." value="<?php echo htmlspecialchars($search_query); ?>">
+                                <button class="btn btn-success" type="submit"><i class="bi bi-search"></i></button>
+                                <?php if (!empty($search_query) || !empty($from_date) || !empty($to_date)): ?>
+                                    <a href="orders.php" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <button type="submit" class="btn btn-success btn-sm w-100 fw-bold"><i class="bi bi-funnel me-1"></i> Filter</button>
                         </div>
                     </form>
                 </div>
@@ -330,8 +435,8 @@ $orders_result = $conn->query($sql);
                             <thead>
                                 <tr>
                                     <th>Ref ID</th>
+                                    <th>Date</th>
                                     <th>Customer</th>
-                                    <th>Total Amount</th>
                                     <th>Status</th>
                                     <th>Customer Details</th>
                                     <th style="min-width: 290px;">Action / Status Update</th>
@@ -344,12 +449,12 @@ $orders_result = $conn->query($sql);
                                 ?>
                                 <tr>
                                     <td class="fw-bold text-white"><?php echo htmlspecialchars($order['order_reference']); ?></td>
+                                    <td class="small text-secondary">
+                                        <?php echo date('Y-m-d H:i', strtotime($order['order_date'])); ?>
+                                    </td>
                                     <td>
                                         <span class="text-white fw-semibold"><?php echo htmlspecialchars($order['shipping_name'] ?? 'N/A'); ?></span><br>
                                         <small class="text-secondary"><i class="bi bi-telephone me-1"></i><?php echo htmlspecialchars($order['shipping_phone'] ?? 'N/A'); ?></small>
-                                    </td>
-                                    <td class="fw-bold text-success">
-                                        <?php echo htmlspecialchars($order['currency_code'] ?? 'LKR') . ' ' . number_format($order['total_amount'], 2); ?>
                                     </td>
                                     <td>
                                         <?php 
@@ -373,6 +478,8 @@ $orders_result = $conn->query($sql);
                                         <form action="orders.php" method="POST" class="action-form d-flex gap-1 align-items-center">
                                             <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
                                             <input type="hidden" name="current_search" value="<?php echo htmlspecialchars($search_query); ?>">
+                                            <input type="hidden" name="current_from" value="<?php echo htmlspecialchars($from_date); ?>">
+                                            <input type="hidden" name="current_to" value="<?php echo htmlspecialchars($to_date); ?>">
                                             <select name="order_status" class="form-select" style="width: 105px;">
                                                 <option value="Processing" <?php if($order['order_status']=='Processing') echo 'selected'; ?>>Processing</option>
                                                 <option value="Shipped" <?php if($order['order_status']=='Shipped') echo 'selected'; ?>>Shipped</option>
@@ -391,7 +498,7 @@ $orders_result = $conn->query($sql);
                                 else: 
                                 ?>
                                 <tr>
-                                    <td colspan="6" class="text-center text-secondary py-5">No customer orders found matching your search criteria.</td>
+                                    <td colspan="6" class="text-center text-secondary py-5">No customer orders found matching your search or date criteria.</td>
                                 </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -469,7 +576,10 @@ $orders_result = $conn->query($sql);
                                                 </div>
                                             <?php endif; ?>
                                             <div>
-                                                <h6 class="mb-0 text-white fw-bold" style="font-size: 0.9rem;"><?php echo htmlspecialchars($item['product_name'] ?? 'Crafted Product'); ?></h6>
+                                                <h6 class="mb-1 text-white fw-bold" style="font-size: 0.95rem;"><?php echo htmlspecialchars($item['product_name'] ?? 'Crafted Product'); ?></h6>
+                                                <span class="badge bg-success bg-opacity-25 text-success border border-success px-2 py-1 mb-1 d-inline-block" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">
+                                                    <i class="bi bi-tag-fill me-1"></i>Product ID: #<?php echo intval($item['product_id']); ?>
+                                                </span><br>
                                                 <small class="text-secondary">
                                                     Unit Price: <?php echo htmlspecialchars($order['currency_code'] ?? 'LKR') . ' ' . number_format($item['unit_price'], 2); ?>
                                                 </small>

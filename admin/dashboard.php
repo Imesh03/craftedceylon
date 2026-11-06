@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/db.php';
+date_default_timezone_set('Asia/Colombo');
 
 if (!isset($_SESSION['admin_logged'])) {
     header("Location: login.php");
@@ -62,11 +63,12 @@ if ($is_super_admin) {
     <style>
         :root {
             --bg-dark: #0d0d12;
-            --bg-card: rgba(22, 22, 32, 0.9);
+            --bg-card: rgba(26, 26, 40, 0.85);
             --bg-sidebar: #13131d;
             --text-main: #ffffff;
-            --text-sub: #adb5bd;
-            --border-color: rgba(255, 255, 255, 0.1);
+            --text-sub: #a0aec0;
+            --accent-green: #198754;
+            --border-color: rgba(255, 255, 255, 0.08);
         }
 
         body {
@@ -80,11 +82,31 @@ if ($is_super_admin) {
             min-height: 100vh;
         }
 
-        /* Sidebar Styling */
+        /* Fixed Sidebar Styling */
         .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
             backdrop-filter: blur(15px);
+            overflow-y: auto;
+            z-index: 1030;
+        }
+
+        /* Main Content Offset for Fixed Sidebar */
+        .main-content-wrapper {
+            margin-left: 16.666667%; /* matches col-lg-2 width */
+        }
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                margin-left: 0;
+            }
+            .sidebar {
+                position: relative;
+                height: auto;
+            }
         }
 
         .nav-link {
@@ -107,29 +129,45 @@ if ($is_super_admin) {
             box-shadow: 0 4px 20px rgba(25, 135, 84, 0.35);
         }
 
-        /* Stat Card Glassmorphism Styling */
+        /* Creative Stat Card Styling */
         .stat-card {
             background: var(--bg-card);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border-color);
             border-radius: 18px;
             padding: 24px;
             position: relative;
             overflow: hidden;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-green), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .stat-card:hover {
             transform: translateY(-6px);
             border-color: rgba(25, 135, 84, 0.4);
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(25, 135, 84, 0.2);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 25px rgba(25, 135, 84, 0.2);
         }
 
-        /* Icon Styling */
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
         .stat-icon {
-            width: 52px;
-            height: 52px;
+            width: 54px;
+            height: 54px;
             border-radius: 14px;
             display: flex;
             align-items: center;
@@ -139,48 +177,51 @@ if ($is_super_admin) {
         }
 
         .stat-card:hover .stat-icon {
-            transform: scale(1.1);
+            transform: scale(1.1) rotate(5deg);
         }
 
         .glow-success {
             box-shadow: 0 0 20px rgba(25, 135, 84, 0.3);
         }
 
-        /* Custom Dashboard Cards & Table Design */
+        /* Dashboard Glass Cards */
         .dashboard-glass-card {
-            background: rgba(18, 18, 26, 0.92);
-            backdrop-filter: blur(25px);
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border-color);
             border-radius: 18px;
             padding: 24px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
         }
 
-        /* Table Customizations for High Contrast & Readability */
-        .table {
-            color: #ffffff !important;
-            margin-bottom: 0;
-            background-color: transparent !important;
+        /* Table Design */
+        .table-dark-custom {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text-main);
+            border-color: var(--border-color);
         }
+
         .table-dark-custom th {
-            background-color: rgba(14, 14, 20, 0.95) !important;
-            color: #ced4da !important;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
-            padding: 12px 16px;
+            color: var(--accent-green);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.8px;
+            padding: 16px 20px;
+            border-bottom: 2px solid var(--border-color);
+            background-color: rgba(19, 19, 29, 0.7);
         }
-        .table tbody tr {
-            background-color: transparent !important;
+
+        .table-dark-custom td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+            vertical-align: middle;
         }
-        .table tbody tr td {
-            background-color: transparent !important;
-            color: #ffffff !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            padding: 14px 16px;
-        }
-        .table tbody tr:hover {
-            background-color: rgba(255, 255, 255, 0.03) !important;
+
+        .table-dark-custom tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.04);
         }
 
         .admin-link {
@@ -195,19 +236,23 @@ if ($is_super_admin) {
 
         /* Dark Modal Styling */
         .modal-content {
-            background: #13131c;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
-            color: #ffffff;
+            background-color: #1a1a28;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+
+        .modal-header, .modal-footer {
+            border-color: var(--border-color);
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar min-vh-100 p-3">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Fixed Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-3">
                 <div class="d-flex align-items-center gap-2 mb-4 px-2">
                     <div class="bg-success text-white rounded-3 p-2 d-flex align-items-center justify-content-center glow-success">
                         <i class="bi bi-flower1 fs-4"></i>
@@ -263,8 +308,8 @@ if ($is_super_admin) {
                 </ul>
             </div>
 
-            <!-- Main Content Area -->
-            <div class="col-md-9 col-lg-10 p-4 p-md-5">
+            <!-- Main Content Area with Left Margin Offset -->
+            <div class="col-md-9 col-lg-10 ms-auto main-content-wrapper p-4 p-md-5">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h2 class="fw-bold text-white mb-1">Dashboard Overview</h2>
@@ -279,7 +324,7 @@ if ($is_super_admin) {
                         <div class="stat-card">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <span class="text-secondary small fw-semibold text-uppercase tracking-wider">Total Products</span>
-                                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                <div class="stat-icon bg-success bg-opacity-10 text-success border border-success border-opacity-25">
                                     <i class="bi bi-box-seam"></i>
                                 </div>
                             </div>
@@ -292,7 +337,7 @@ if ($is_super_admin) {
                         <div class="stat-card">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <span class="text-secondary small fw-semibold text-uppercase tracking-wider">Total Orders</span>
-                                <div class="stat-icon bg-info bg-opacity-10 text-info">
+                                <div class="stat-icon bg-info bg-opacity-10 text-info border border-info border-opacity-25">
                                     <i class="bi bi-cart-check"></i>
                                 </div>
                             </div>
@@ -305,7 +350,7 @@ if ($is_super_admin) {
                         <div class="stat-card">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <span class="text-secondary small fw-semibold text-uppercase tracking-wider">Customers</span>
-                                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                                <div class="stat-icon bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">
                                     <i class="bi bi-people"></i>
                                 </div>
                             </div>
@@ -318,7 +363,7 @@ if ($is_super_admin) {
                         <div class="stat-card">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <span class="text-secondary small fw-semibold text-uppercase tracking-wider">Total Revenue</span>
-                                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                                <div class="stat-icon bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
                                     <i class="bi bi-currency-dollar"></i>
                                 </div>
                             </div>
@@ -341,8 +386,8 @@ if ($is_super_admin) {
                             </div>
                             
                             <div class="table-responsive">
-                                <table class="table align-middle">
-                                    <thead class="table-dark-custom">
+                                <table class="table table-dark-custom align-middle mb-0">
+                                    <thead>
                                         <tr>
                                             <th>#ID</th>
                                             <th>Product Name</th>
@@ -382,14 +427,14 @@ if ($is_super_admin) {
                         <div class="dashboard-glass-card h-100">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <h5 class="fw-bold text-white mb-0 d-flex align-items-center gap-2">
-                                    <i class="bi bi-shield-check text-warning fs-5"></i> Active System Admins (Click to View Logs)
+                                    <i class="bi bi-shield-check text-warning fs-5"></i> Active System Admins
                                 </h5>
                                 <a href="manage-admins.php" class="btn btn-sm btn-outline-warning">Manage</a>
                             </div>
 
                             <div class="table-responsive">
-                                <table class="table align-middle">
-                                    <thead class="table-dark-custom">
+                                <table class="table table-dark-custom align-middle mb-0">
+                                    <thead>
                                         <tr>
                                             <th>Admin Name</th>
                                             <th>Email</th>
@@ -439,7 +484,7 @@ if ($is_super_admin) {
             <div class="modal fade" id="activityModal<?php echo $ar['admin_id']; ?>" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content p-3">
-                        <div class="modal-header border-bottom border-secondary border-opacity-10 pb-3">
+                        <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
                             <h5 class="modal-title fw-bold text-info d-flex align-items-center gap-2">
                                 <i class="bi bi-clock-history"></i> Activity Logs: <?php echo htmlspecialchars($ar['username']); ?> (<?php echo htmlspecialchars($ar['email']); ?>)
                             </h5>
@@ -448,7 +493,7 @@ if ($is_super_admin) {
                         
                         <div class="modal-body py-3">
                             <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-                                <table class="table table-hover table-sm align-middle">
+                                <table class="table table-dark-custom table-hover table-sm align-middle mb-0">
                                     <thead>
                                         <tr style="font-size: 12px;">
                                             <th>Activity / Action</th>
@@ -479,8 +524,8 @@ if ($is_super_admin) {
                             </div>
                         </div>
 
-                        <div class="modal-footer border-top border-secondary border-opacity-10 pt-3">
-                            <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                        <div class="modal-footer border-top border-secondary border-opacity-25 pt-3">
+                            <button type="button" class="btn btn-secondary btn-sm rounded-3 px-4" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
                 </div>

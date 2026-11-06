@@ -18,6 +18,10 @@ $role_stmt->execute();
 $current_admin = $role_stmt->get_result()->fetch_assoc();
 $is_super_admin = ($current_admin && $current_admin['role'] === 'Super Admin');
 
+// Fetch current live exchange rate from site_settings
+$rate_res = $conn->query("SELECT setting_value FROM site_settings WHERE setting_key = 'usd_exchange_rate'");
+$current_exchange_rate = ($rate_res && $rate_res->num_rows > 0) ? floatval($rate_res->fetch_assoc()['setting_value']) : 333.58;
+
 $success = '';
 $error = '';
 
@@ -25,7 +29,10 @@ if (isset($_POST['add_product'])) {
     $product_name = trim($_POST['product_name']);
     $description = trim($_POST['description']);
     $price_lkr = floatval($_POST['price_lkr']);
-    $price_usd = floatval($_POST['price_usd']);
+    
+    // Auto calculate or use posted USD based on exchange rate
+    $price_usd = ($price_lkr > 0 && $current_exchange_rate > 0) ? round($price_lkr / $current_exchange_rate, 2) : floatval($_POST['price_usd']);
+    
     $stock_quantity = intval($_POST['stock_quantity']);
     
     $is_biodegradable = isset($_POST['is_biodegradable']) ? 1 : 0;
@@ -157,18 +164,39 @@ if (isset($_POST['add_product'])) {
         body {
             background-color: var(--bg-dark);
             background-image: linear-gradient(135deg, rgba(13, 13, 18, 0.95), rgba(20, 30, 25, 0.9)), 
-                              radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
-                              radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
+                            radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
+                            radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
             background-attachment: fixed;
             color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
         }
 
+        /* Fixed Sidebar Styling */
         .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
             backdrop-filter: blur(15px);
+            overflow-y: auto;
+            z-index: 1030;
+        }
+
+        /* Main Content Offset for Fixed Sidebar */
+        .main-content-wrapper {
+            margin-left: 16.666667%; /* matches col-lg-2 width */
+        }
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                margin-left: 0;
+            }
+            .sidebar {
+                position: relative;
+                height: auto;
+            }
         }
 
         .nav-link {
@@ -215,6 +243,13 @@ if (isset($_POST['add_product'])) {
             box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
         }
 
+        .form-control[readonly] {
+            background-color: rgba(40, 40, 55, 0.6);
+            cursor: not-allowed;
+            color: #198754;
+            font-weight: bold;
+        }
+
         .form-control::placeholder {
             color: #6c757d;
         }
@@ -235,10 +270,10 @@ if (isset($_POST['add_product'])) {
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar min-vh-100 p-3">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Fixed Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-3">
                 <div class="d-flex align-items-center gap-2 mb-4 px-2">
                     <div class="bg-success text-white rounded-3 p-2 d-flex align-items-center justify-content-center glow-success">
                         <i class="bi bi-flower1 fs-4"></i>
@@ -259,8 +294,8 @@ if (isset($_POST['add_product'])) {
                 </ul>
             </div>
 
-            <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 p-4 p-md-5">
+            <!-- Main Content Container with Left Margin Offset -->
+            <div class="col-md-9 col-lg-10 ms-auto main-content-wrapper p-4 p-md-5">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h2 class="fw-bold text-white mb-1">Add New Handcrafted Product</h2>
@@ -315,13 +350,14 @@ if (isset($_POST['add_product'])) {
                                 <input type="text" name="artisan_location" class="form-control form-control-sm" placeholder="Artisan location (e.g. Galle, Sri Lanka)">
                             </div>
 
+                            <!-- Live Price Calculation fields -->
                             <div class="col-md-3 mb-3">
                                 <label class="form-label fw-bold small text-light">Price in LKR (Rs.)</label>
-                                <input type="number" step="0.01" name="price_lkr" class="form-control" required placeholder="0.00">
+                                <input type="number" step="0.01" id="price_lkr" name="price_lkr" class="form-control" required placeholder="0.00" oninput="calculateLiveUSD(<?php echo $current_exchange_rate; ?>)">
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label class="form-label fw-bold small text-light">Price in USD ($)</label>
-                                <input type="number" step="0.01" name="price_usd" class="form-control" required placeholder="0.00">
+                                <label class="form-label fw-bold small text-light">Price in USD ($) <small class="text-secondary">(Auto rate: <?php echo $current_exchange_rate; ?>)</small></label>
+                                <input type="number" step="0.01" id="price_usd" name="price_usd" class="form-control" required placeholder="0.00" readonly>
                             </div>
                         </div>
 
@@ -372,5 +408,21 @@ if (isset($_POST['add_product'])) {
             </div>
         </div>
     </div>
+
+    <!-- Live Exchange Rate JS Calculation Script -->
+    <script>
+        function calculateLiveUSD(exchangeRate) {
+            let lkrInput = document.getElementById('price_lkr');
+            let usdInput = document.getElementById('price_usd');
+            let lkrVal = parseFloat(lkrInput.value);
+            
+            if (!isNaN(lkrVal) && exchangeRate > 0) {
+                let usdVal = (lkrVal / exchangeRate).toFixed(2);
+                usdInput.value = usdVal;
+            } else {
+                usdInput.value = '';
+            }
+        }
+    </script>
 </body>
 </html>

@@ -156,8 +156,8 @@ if ($view_customer_id > 0) {
         body {
             background-color: var(--bg-dark);
             background-image: linear-gradient(135deg, rgba(13, 13, 18, 0.95), rgba(20, 30, 25, 0.9)), 
-                              radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
-                              radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
+                            radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
+                            radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
             background-attachment: fixed;
             color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -165,9 +165,28 @@ if ($view_customer_id > 0) {
         }
 
         .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
             backdrop-filter: blur(15px);
+            z-index: 1030;
+            overflow-y: auto;
+        }
+
+        .main-content-wrapper {
+            margin-left: 16.666667%;
+        }
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                margin-left: 0;
+            }
+            .sidebar {
+                position: relative;
+                height: auto;
+            }
         }
 
         .nav-link {
@@ -334,10 +353,10 @@ if ($view_customer_id > 0) {
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar min-vh-100 p-3">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Fixed Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-3">
                 <div class="d-flex align-items-center gap-2 mb-4 px-2">
                     <div class="bg-success text-white rounded-3 p-2 d-flex align-items-center justify-content-center glow-success">
                         <i class="bi bi-flower1 fs-4"></i>
@@ -358,8 +377,8 @@ if ($view_customer_id > 0) {
                 </ul>
             </div>
 
-            <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 p-4 p-md-5">
+            <!-- Main Content with Left Margin Offset -->
+            <div class="col-md-9 col-lg-10 ms-auto main-content-wrapper p-4 p-md-5">
                 
                 <?php if (isset($_GET['msg']) && $_GET['msg'] == 'logs_cleared'): ?>
                     <div class="alert alert-success bg-success text-white border-0 shadow-sm alert-dismissible fade show mb-4" role="alert">
@@ -675,6 +694,7 @@ if ($view_customer_id > 0) {
                         <?php foreach ($orders_array as $ord): ?>
                             <?php 
                                 $current_order_id = intval($ord['order_id']);
+                                // Fetch product_id along with product name & image
                                 $items_query = $conn->query("SELECT oi.*, p.product_name, p.main_image FROM order_items oi LEFT JOIN products p ON oi.product_id = p.product_id WHERE oi.order_id = $current_order_id");
                                 $ord_status = $ord['order_status'];
                                 $badge_class = 'warning text-dark';
@@ -716,12 +736,13 @@ if ($view_customer_id > 0) {
                                                 </div>
                                             </div>
 
-                                            <!-- Ordered Items & Quantity Section -->
+                                            <!-- Ordered Items & Quantity Section with Product ID Display -->
                                             <div class="mt-3">
                                                 <h6 class="text-success fw-bold border-bottom border-secondary pb-2 mb-3"><i class="bi bi-basket me-1"></i> Ordered Items & Quantities</h6>
                                                 <div class="d-flex flex-column gap-2">
                                                     <?php if ($items_query && $items_query->num_rows > 0): ?>
                                                         <?php while($item = $items_query->fetch_assoc()): ?>
+                                                            <?php $p_id = intval($item['product_id']); ?>
                                                             <div class="item-row-card d-flex align-items-center justify-content-between">
                                                                 <div class="d-flex align-items-center gap-3">
                                                                     <?php if (!empty($item['main_image'])): ?>
@@ -732,7 +753,13 @@ if ($view_customer_id > 0) {
                                                                         </div>
                                                                     <?php endif; ?>
                                                                     <div>
-                                                                        <h6 class="mb-0 text-white fw-bold" style="font-size: 0.9rem;"><?php echo htmlspecialchars($item['product_name'] ?? 'Crafted Product'); ?></h6>
+                                                                        <div class="d-flex align-items-center gap-2">
+                                                                            <h6 class="mb-0 text-white fw-bold" style="font-size: 0.9rem;"><?php echo htmlspecialchars($item['product_name'] ?? 'Crafted Product'); ?></h6>
+                                                                            <!-- DISPLAY PRODUCT ID HERE -->
+                                                                            <span class="badge bg-dark border border-secondary text-info font-monospace" style="font-size: 0.75rem;">
+                                                                                Product ID: #<?php echo $p_id; ?>
+                                                                            </span>
+                                                                        </div>
                                                                         <small class="text-secondary">
                                                                             Unit Price: <?php echo htmlspecialchars($ord['currency_code'] ?? 'LKR') . ' ' . number_format($item['unit_price'], 2); ?>
                                                                         </small>

@@ -229,18 +229,39 @@ $result = $conn->query($sql);
         body {
             background-color: var(--bg-dark);
             background-image: linear-gradient(135deg, rgba(13, 13, 18, 0.95), rgba(20, 30, 25, 0.9)), 
-                              radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
-                              radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
+                            radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
+                            radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
             background-attachment: fixed;
             color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
         }
 
+        /* Fixed Sidebar Styling */
         .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
             backdrop-filter: blur(15px);
+            overflow-y: auto;
+            z-index: 1030;
+        }
+
+        /* Main Content Offset for Fixed Sidebar */
+        .main-content-wrapper {
+            margin-left: 16.666667%; /* matches col-lg-2 width */
+        }
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                margin-left: 0;
+            }
+            .sidebar {
+                position: relative;
+                height: auto;
+            }
         }
 
         .nav-link {
@@ -340,10 +361,10 @@ $result = $conn->query($sql);
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar min-vh-100 p-3">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Fixed Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-3">
                 <div class="d-flex align-items-center gap-2 mb-4 px-2">
                     <div class="bg-success text-white rounded-3 p-2 d-flex align-items-center justify-content-center glow-success">
                         <i class="bi bi-flower1 fs-4"></i>
@@ -364,8 +385,8 @@ $result = $conn->query($sql);
                 </ul>
             </div>
 
-            <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 p-4 p-md-5">
+            <!-- Main Content Container with Left Margin Offset -->
+            <div class="col-md-9 col-lg-10 ms-auto main-content-wrapper p-4 p-md-5">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h2 class="fw-bold text-white mb-1">Product Catalog & Settings</h2>
@@ -535,135 +556,134 @@ $result = $conn->query($sql);
                         </table>
                     </div>
                 </div>
-
-                <!-- Edit Product Modals Loop with Live Exchange Rate Auto USD Calculation & Gallery Management -->
-                <?php if (isset($products_array)): foreach($products_array as $row): ?>
-                <div class="modal fade" id="editModal<?php echo $row['product_id']; ?>" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered modal-lg">
-                        <div class="modal-content p-3">
-                            <form action="products.php" method="POST" enctype="multipart/form-data">
-                                <div class="modal-header border-bottom border-secondary border-opacity-25">
-                                    <h5 class="modal-title fw-bold text-success">
-                                        <i class="bi bi-pencil-square me-2"></i> Edit Product: <?php echo htmlspecialchars($row['product_name']); ?>
-                                    </h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body py-4">
-                                    <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
-                                    
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label small text-secondary fw-bold">Product Name</label>
-                                            <input type="text" name="product_name" class="form-control" value="<?php echo htmlspecialchars($row['product_name']); ?>" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small text-secondary fw-bold">Category</label>
-                                            <select name="category_id" class="form-select" required>
-                                                <?php
-                                                $cat_q = $conn->query("SELECT * FROM categories");
-                                                while($cat = $cat_q->fetch_assoc()) {
-                                                    $sel = ($cat['category_id'] == $row['category_id']) ? 'selected' : '';
-                                                    echo '<option value="'.$cat['category_id'].'" '.$sel.'>'.htmlspecialchars($cat['category_name']).'</option>';
-                                                }
-                                                ?>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small text-secondary fw-bold">Price (LKR)</label>
-                                            <input type="number" step="0.01" id="price_lkr_<?php echo $row['product_id']; ?>" name="price_lkr" class="form-control" value="<?php echo $row['price_lkr']; ?>" required oninput="calculateLiveUSD(<?php echo $row['product_id']; ?>, <?php echo $current_exchange_rate; ?>)">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small text-secondary fw-bold">Price (USD) <small class="text-secondary">(Auto calculated via rate: <?php echo $current_exchange_rate; ?>)</small></label>
-                                            <input type="number" step="0.01" id="price_usd_<?php echo $row['product_id']; ?>" name="price_usd" class="form-control" value="<?php echo $row['price_usd']; ?>" readonly>
-                                        </div>
-                                        <div class="col-md-12">
-                                            <label class="form-label small text-secondary fw-bold">Stock Quantity</label>
-                                            <input type="number" name="stock_quantity" class="form-control" value="<?php echo $row['stock_quantity']; ?>" required>
-                                        </div>
-                                        <div class="col-md-12">
-                                            <label class="form-label small text-secondary fw-bold">Description</label>
-                                            <textarea name="description" class="form-control" rows="3"><?php echo htmlspecialchars($row['description'] ?? ''); ?></textarea>
-                                        </div>
-                                        
-                                        <!-- Main Image Edit -->
-                                        <div class="col-md-12">
-                                            <label class="form-label small text-secondary fw-bold">Product Main Image (Upload new to replace)</label>
-                                            <div class="d-flex align-items-center gap-3">
-                                                <?php if(!empty($row['main_image'])): ?>
-                                                    <img src="../<?php echo htmlspecialchars($row['main_image']); ?>" class="rounded border border-secondary" style="width: 60px; height: 60px; object-fit: cover;" alt="Current">
-                                                <?php endif; ?>
-                                                <input type="file" name="main_image" class="form-control" accept="image/*">
-                                            </div>
-                                        </div>
-
-                                        <!-- Gallery Images Management (Delete existing & Upload new) -->
-                                        <div class="col-md-12 mt-2">
-                                            <label class="form-label small text-secondary fw-bold">Current Angle / Gallery Images (Check to delete)</label>
-                                            <div class="d-flex flex-wrap gap-2 mb-2 p-2 bg-dark rounded border border-secondary">
-                                                <?php
-                                                $curr_p_id = $row['product_id'];
-                                                $gal_query = $conn->query("SELECT * FROM product_images WHERE product_id = $curr_p_id");
-                                                if ($gal_query && $gal_query->num_rows > 0) {
-                                                    while($g_img = $gal_query->fetch_assoc()) {
-                                                        echo '<div class="position-relative text-center border border-secondary rounded p-1" style="width: 70px;">';
-                                                        echo '<img src="../' . htmlspecialchars($g_img['image_path']) . '" class="rounded" style="width: 60px; height: 60px; object-fit: cover;">';
-                                                        echo '<div class="form-check mt-1 d-flex justify-content-center">';
-                                                        echo '<input class="form-check-input" type="checkbox" name="delete_images[]" value="' . $g_img['image_id'] . '" title="Check to delete">';
-                                                        echo '</div>';
-                                                        echo '</div>';
-                                                    }
-                                                } else {
-                                                    echo '<span class="text-secondary small fst-italic">No extra gallery images uploaded.</span>';
-                                                }
-                                                ?>
-                                            </div>
-                                            
-                                            <label class="form-label small text-secondary fw-bold mt-2">Add New Angle Images</label>
-                                            <input type="file" name="new_gallery_images[]" class="form-control" multiple accept="image/*">
-                                        </div>
-
-                                        <div class="col-md-12 mt-3">
-                                            <div class="form-check form-check-inline text-light">
-                                                <input class="form-check-input" type="checkbox" name="is_biodegradable" id="bio_<?php echo $row['product_id']; ?>" value="1" <?php echo $row['is_biodegradable'] ? 'checked' : ''; ?>>
-                                                <label class="form-check-label small" for="bio_<?php echo $row['product_id']; ?>">100% Biodegradable</label>
-                                            </div>
-                                            <div class="form-check form-check-inline text-light">
-                                                <input class="form-check-input" type="checkbox" name="is_recyclable" id="rec_<?php echo $row['product_id']; ?>" value="1" <?php echo $row['is_recyclable'] ? 'checked' : ''; ?>>
-                                                <label class="form-check-label small" for="rec_<?php echo $row['product_id']; ?>">Recyclable Material</label>
-                                            </div>
-                                            <div class="form-check form-check-inline text-light">
-                                                <input class="form-check-input" type="checkbox" name="is_customizable" id="cust_<?php echo $row['product_id']; ?>" value="1" <?php echo $row['is_customizable'] ? 'checked' : ''; ?>>
-                                                <label class="form-check-label small" for="cust_<?php echo $row['product_id']; ?>">Customizable</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-top border-secondary border-opacity-25">
-                                    <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" name="update_product" class="btn btn-success btn-sm px-4 fw-bold">Save Changes</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <?php endforeach; endif; ?>
-
             </div>
         </div>
     </div>
-    
+
+    <!-- Edit Product Modals Loop with Live Exchange Rate Auto USD Calculation & Gallery Management -->
+    <?php if (isset($products_array)): foreach($products_array as $row): ?>
+    <div class="modal fade" id="editModal<?php echo $row['product_id']; ?>" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content p-3">
+                <form action="products.php" method="POST" enctype="multipart/form-data">
+                    <div class="modal-header border-bottom border-secondary border-opacity-25">
+                        <h5 class="modal-title fw-bold text-success">
+                            <i class="bi bi-pencil-square me-2"></i> Edit Product: <?php echo htmlspecialchars($row['product_name']); ?>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary fw-bold">Product Name</label>
+                                <input type="text" name="product_name" class="form-control" value="<?php echo htmlspecialchars($row['product_name']); ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary fw-bold">Category</label>
+                                <select name="category_id" class="form-select" required>
+                                    <?php
+                                    $cat_q = $conn->query("SELECT * FROM categories");
+                                    while($cat = $cat_q->fetch_assoc()) {
+                                        $sel = ($cat['category_id'] == $row['category_id']) ? 'selected' : '';
+                                        echo '<option value="'.$cat['category_id'].'" '.$sel.'>'.htmlspecialchars($cat['category_name']).'</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary fw-bold">Price (LKR)</label>
+                                <input type="number" step="0.01" id="price_lkr_<?php echo $row['product_id']; ?>" name="price_lkr" class="form-control" value="<?php echo $row['price_lkr']; ?>" required oninput="calculateLiveUSD(<?php echo $row['product_id']; ?>, <?php echo $current_exchange_rate; ?>)">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary fw-bold">Price (USD) <small class="text-secondary">(Auto calculated via rate: <?php echo $current_exchange_rate; ?>)</small></label>
+                                <input type="number" step="0.01" id="price_usd_<?php echo $row['product_id']; ?>" name="price_usd" class="form-control" value="<?php echo $row['price_usd']; ?>" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary fw-bold">Stock Quantity</label>
+                                <input type="number" name="stock_quantity" class="form-control" value="<?php echo $row['stock_quantity']; ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary fw-bold">Main Image (Update)</label>
+                                <input type="file" name="main_image" class="form-control">
+                                <?php if(!empty($row['main_image'])): ?>
+                                    <small class="text-secondary mt-1 d-block">Current: <?php echo basename($row['main_image']); ?></small>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small text-secondary fw-bold">Description</label>
+                                <textarea name="description" class="form-control" rows="3"><?php echo htmlspecialchars($row['description']); ?></textarea>
+                            </div>
+
+                            <!-- Gallery Images Management Section -->
+                            <div class="col-12 border-top border-secondary border-opacity-25 pt-3 mt-3">
+                                <label class="form-label small text-success fw-bold mb-2"><i class="bi bi-images me-1"></i> Existing Gallery Images (Select to Delete)</label>
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <?php
+                                    $gal_q = $conn->prepare("SELECT * FROM product_images WHERE product_id = ?");
+                                    $gal_q->bind_param("i", $row['product_id']);
+                                    $gal_q->execute();
+                                    $gal_res = $gal_q->get_result();
+                                    if ($gal_res->num_rows > 0) {
+                                        while($gal_img = $gal_res->fetch_assoc()) {
+                                            echo '<div class="position-relative border border-secondary rounded p-1 bg-dark text-center" style="width: 70px;">';
+                                            echo '<img src="../'.htmlspecialchars($gal_img['image_path']).'" class="rounded" style="width: 55px; height: 55px; object-fit: cover;"><br>';
+                                            echo '<input type="checkbox" name="delete_images[]" value="'.$gal_img['image_id'].'" class="form-check-input mt-1" title="Select to delete">';
+                                            echo '</div>';
+                                        }
+                                    } else {
+                                        echo '<span class="text-secondary small fst-italic">No additional gallery images uploaded for this product.</span>';
+                                    }
+                                    ?>
+                                </div>
+                                
+                                <label class="form-label small text-success fw-bold">Add New Gallery Images</label>
+                                <input type="file" name="new_gallery_images[]" class="form-control" multiple>
+                                <small class="text-secondary">You can select multiple images to add to the gallery.</small>
+                            </div>
+
+                            <div class="col-12 border-top border-secondary border-opacity-25 pt-3 mt-3">
+                                <div class="d-flex gap-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="is_biodegradable" value="1" id="bio_<?php echo $row['product_id']; ?>" <?php echo $row['is_biodegradable'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label text-light small" for="bio_<?php echo $row['product_id']; ?>">Biodegradable</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="is_recyclable" value="1" id="rec_<?php echo $row['product_id']; ?>" <?php echo $row['is_recyclable'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label text-light small" for="rec_<?php echo $row['product_id']; ?>">Recyclable</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="is_customizable" value="1" id="cus_<?php echo $row['product_id']; ?>" <?php echo $row['is_customizable'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label text-light small" for="cus_<?php echo $row['product_id']; ?>">Customizable</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top border-secondary border-opacity-25">
+                        <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" name="update_product" class="btn btn-success btn-sm px-4 fw-bold">Update Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; endif; ?>
+
+    <!-- Bootstrap JS & Live USD Calculation Script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
     <script>
         function calculateLiveUSD(productId, exchangeRate) {
-            let lkrInput = document.getElementById('price_lkr_' + productId).value;
+            let lkrInput = document.getElementById('price_lkr_' + productId);
             let usdInput = document.getElementById('price_usd_' + productId);
-
-            if (lkrInput > 0 && exchangeRate > 0) {
-                let calculatedUSD = (lkrInput / exchangeRate).toFixed(2);
-                usdInput.value = calculatedUSD;
+            let lkrVal = parseFloat(lkrInput.value);
+            
+            if (!isNaN(lkrVal) && exchangeRate > 0) {
+                let usdVal = (lkrVal / exchangeRate).toFixed(2);
+                usdInput.value = usdVal;
             } else {
-                usdInput.value = '';
+                usdInput.value = '0.00';
             }
         }
     </script>

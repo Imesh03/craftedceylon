@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/db.php';
+date_default_timezone_set('Asia/Colombo');
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin_logged'])) {
@@ -40,7 +41,7 @@ if (isset($_POST['action_type']) && isset($_POST['review_id'])) {
 }
 
 // Fetch all reviews with user and product details
-$sql = "SELECT r.*, u.full_name, u.email, p.product_name 
+$sql = "SELECT r.*, u.full_name, u.email, p.product_name, p.product_id as prod_id 
         FROM product_reviews r 
         LEFT JOIN users u ON r.user_id = u.user_id 
         LEFT JOIN products p ON r.product_id = p.product_id 
@@ -53,7 +54,7 @@ $reviews_result = $conn->query($sql);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Reviews Management - Admin Dark Portal</title>
+    <title>Customer Reviews Management - CraftedCeylon Admin</title>
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
@@ -63,32 +64,54 @@ $reviews_result = $conn->query($sql);
     
     <style>
         :root {
-            --bg-dark: #121216;
-            --bg-card: #1e1e2f;
-            --bg-sidebar: #161622;
+            --bg-dark: #0d0d12;
+            --bg-card: rgba(26, 26, 40, 0.85);
+            --bg-sidebar: #13131d;
             --text-main: #ffffff;
-            --text-sub: #adb5bd;
+            --text-sub: #a0aec0;
             --accent-green: #198754;
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
         body {
             background-color: var(--bg-dark);
+            background-image: linear-gradient(135deg, rgba(13, 13, 18, 0.95), rgba(20, 30, 25, 0.9)), 
+                            radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
+                            radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
+            background-attachment: fixed;
             color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
         }
 
-        /* Sidebar Styling */
         .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
+            z-index: 1030;
+            overflow-y: auto;
+        }
+
+        .main-content-wrapper {
+            margin-left: 16.666667%;
+        }
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                margin-left: 0;
+            }
+            .sidebar {
+                position: relative;
+                height: auto;
+            }
         }
 
         .nav-link {
             color: var(--text-sub);
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 12px 16px;
             font-weight: 500;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -103,20 +126,18 @@ $reviews_result = $conn->query($sql);
         .nav-link.active {
             background: linear-gradient(135deg, #198754 0%, #146c43 100%);
             color: #ffffff !important;
-            box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+            box-shadow: 0 4px 20px rgba(25, 135, 84, 0.35);
         }
 
-        /* Glassmorphism Dark Card */
         .dark-card {
-            background: rgba(30, 30, 47, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+            border-radius: 18px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
         }
 
-        /* High-Contrast Table Styling */
         .table-dark-custom {
             --bs-table-bg: transparent;
             --bs-table-color: var(--text-main);
@@ -129,14 +150,14 @@ $reviews_result = $conn->query($sql);
             text-transform: uppercase;
             font-size: 0.75rem;
             letter-spacing: 0.8px;
-            padding: 14px 16px;
+            padding: 12px 16px;
             border-bottom: 2px solid var(--border-color);
-            background-color: rgba(22, 22, 34, 0.5);
+            background-color: rgba(19, 19, 29, 0.95);
             white-space: nowrap;
         }
 
         .table-dark-custom td {
-            padding: 14px 16px;
+            padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
             color: var(--text-main);
             vertical-align: middle;
@@ -144,19 +165,19 @@ $reviews_result = $conn->query($sql);
         }
 
         .table-dark-custom tbody tr:hover {
-            background-color: rgba(255, 255, 255, 0.03);
+            background-color: rgba(255, 255, 255, 0.04);
         }
 
         .glow-success {
-            box-shadow: 0 0 15px rgba(25, 135, 84, 0.2);
+            box-shadow: 0 0 20px rgba(25, 135, 84, 0.3);
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar min-vh-100 p-3">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Fixed Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-3">
                 <div class="d-flex align-items-center gap-2 mb-4 px-2">
                     <div class="bg-success text-white rounded-3 p-2 d-flex align-items-center justify-content-center glow-success">
                         <i class="bi bi-flower1 fs-4"></i>
@@ -164,59 +185,24 @@ $reviews_result = $conn->query($sql);
                     <h5 class="fw-bold text-white mb-0">CraftedCeylon</h5>
                 </div>
                 <ul class="nav flex-column gap-2">
-                    <li class="nav-item">
-                        <a href="dashboard.php" class="nav-link">
-                            <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="products.php" class="nav-link">
-                            <i class="bi bi-box-seam me-2"></i> Products
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="orders.php" class="nav-link">
-                            <i class="bi bi-cart-check me-2"></i> Orders & Tracking
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="inventory.php" class="nav-link">
-                            <i class="bi bi-stack me-2"></i> Inventory Stock
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="customers.php" class="nav-link">
-                            <i class="bi bi-people me-2"></i> Customers
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="reviews.php" class="nav-link active">
-                            <i class="bi bi-star-half me-2"></i> Customer Reviews
-                        </a>
-                    </li>
-
-                    <!-- Super Admin Only Menu Item -->
+                    <li class="nav-item"><a href="dashboard.php" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                    <li class="nav-item"><a href="products.php" class="nav-link"><i class="bi bi-box-seam me-2"></i> Products</a></li>
+                    <li class="nav-item"><a href="orders.php" class="nav-link"><i class="bi bi-cart-check me-2"></i> Orders & Tracking</a></li>
+                    <li class="nav-item"><a href="inventory.php" class="nav-link"><i class="bi bi-stack me-2"></i> Inventory Stock</a></li>
+                    <li class="nav-item"><a href="customers.php" class="nav-link"><i class="bi bi-people me-2"></i> Customers</a></li>
+                    <li class="nav-item"><a href="reviews.php" class="nav-link active"><i class="bi bi-star-half me-2"></i> Customer Reviews</a></li>
                     <?php if ($is_super_admin): ?>
-                    <li class="nav-item">
-                        <a href="manage-admins.php" class="nav-link text-warning">
-                            <i class="bi bi-shield-lock-fill me-2"></i> Manage Admins
-                        </a>
-                    </li>
+                    <li class="nav-item"><a href="manage-admins.php" class="nav-link text-warning"><i class="bi bi-shield-lock-fill me-2"></i> Manage Admins</a></li>
                     <?php endif; ?>
-
-                    <li class="nav-item mt-5">
-                        <a href="logout.php" class="nav-link text-danger">
-                            <i class="bi bi-box-arrow-right me-2"></i> Logout
-                        </a>
-                    </li>
+                    <li class="nav-item mt-5"><a href="logout.php" class="nav-link text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
                 </ul>
             </div>
 
-            <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 p-4 p-md-5">
+            <!-- Main Content with Left Margin Offset -->
+            <div class="col-md-9 col-lg-10 ms-auto main-content-wrapper p-4 p-md-5">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2 class="fw-bold text-white mb-1">Customer Reviews Management</h2>
+                        <h2 class="fw-bold text-white mb-1"><i class="bi bi-star-half me-2 text-success"></i> Customer Reviews Management</h2>
                         <p class="text-secondary small mb-0">Approve, hide, or manage feedback submitted by customers.</p>
                     </div>
                 </div>
@@ -228,7 +214,7 @@ $reviews_result = $conn->query($sql);
                                 <tr>
                                     <th>Review ID</th>
                                     <th>Customer</th>
-                                    <th>Product</th>
+                                    <th>Product Details</th>
                                     <th>Rating</th>
                                     <th>Comment</th>
                                     <th>Status</th>
@@ -244,7 +230,13 @@ $reviews_result = $conn->query($sql);
                                             <span class="text-white fw-semibold"><?php echo htmlspecialchars($rev['full_name'] ?? 'Guest'); ?></span><br>
                                             <small class="text-secondary"><?php echo htmlspecialchars($rev['email'] ?? 'N/A'); ?></small>
                                         </td>
-                                        <td><span class="text-info"><?php echo htmlspecialchars($rev['product_name'] ?? 'Product #' . $rev['product_id']); ?></span></td>
+                                        <td>
+                                            <span class="text-info fw-bold"><?php echo htmlspecialchars($rev['product_name'] ?? 'Product #' . $rev['product_id']); ?></span><br>
+                                            <!-- Product ID display badge -->
+                                            <span class="badge bg-dark border border-secondary text-info font-monospace mt-1" style="font-size: 0.7rem;">
+                                                Product ID: #<?php echo intval($rev['prod_id'] ?? $rev['product_id']); ?>
+                                            </span>
+                                        </td>
                                         <td>
                                             <span class="text-warning">
                                                 <?php for($i = 1; $i <= 5; $i++): ?>

@@ -215,6 +215,29 @@ if ($result && $result->num_rows > 0) {
         box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
     }
     
+    /* Product Description Scrollbar Added */
+    .product-description-scroll {
+        max-height: 160px;
+        overflow-y: auto;
+        padding-right: 5px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(25, 135, 84, 0.5) rgba(255, 255, 255, 0.05);
+    }
+    .product-description-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+    .product-description-scroll::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
+    .product-description-scroll::-webkit-scrollbar-thumb {
+        background: rgba(25, 135, 84, 0.6);
+        border-radius: 4px;
+    }
+    .product-description-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(25, 135, 84, 0.9);
+    }
+
     .reviews-preview-box {
         max-height: 280px;
         overflow-y: auto;
@@ -236,7 +259,7 @@ if ($result && $result->num_rows > 0) {
         border-color: #198754 !important;
     }
 
-    /* 7x5 Inches Aspect Ratio / Styled Lightbox Viewer */
+    /* 7x5 Inches Aspect Ratio / Transparent Lightbox Container */
     .lightbox-container {
         width: 100%;
         max-width: 700px;
@@ -245,9 +268,8 @@ if ($result && $result->num_rows > 0) {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #000000;
-        border-radius: 12px;
-        overflow: hidden;
+        background: transparent !important;
+        border: none !important;
         position: relative;
     }
     .lightbox-container img {
@@ -259,9 +281,9 @@ if ($result && $result->num_rows > 0) {
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(0, 0, 0, 0.75);
         color: #ffffff;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         width: 45px;
         height: 45px;
@@ -271,7 +293,7 @@ if ($result && $result->num_rows > 0) {
         font-size: 1.2rem;
         cursor: pointer;
         transition: all 0.3s ease;
-        z-index: 10;
+        z-index: 1050;
     }
     .lightbox-nav-btn:hover {
         background: #198754;
@@ -279,26 +301,37 @@ if ($result && $result->num_rows > 0) {
         color: #ffffff;
     }
     .lightbox-prev {
-        left: 15px;
+        left: -15px;
     }
     .lightbox-next {
-        right: 15px;
+        right: -15px;
     }
 
-    /* Enhanced Clear Close Button Fix */
-    .modal .btn-close-white, 
-    .modal .btn-close {
-        background-color: rgba(0, 0, 0, 0.8) !important;
-        padding: 12px !important;
+    /* Small, Red-themed Close Button Fixed for Lightbox Modal */
+    .lightbox-close-btn {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background-color: rgba(0, 0, 0, 0.75) !important;
+        color: #ffffff !important;
+        border: 2px solid rgba(220, 53, 69, 0.9) !important;
+        padding: 6px !important;
         border-radius: 50% !important;
         opacity: 1 !important;
-        border: 2px solid rgba(255, 255, 255, 0.6);
+        cursor: pointer;
         transition: all 0.3s ease;
+        z-index: 2000 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.6);
     }
-    .modal .btn-close-white:hover, 
-    .modal .btn-close:hover {
-        background-color: #198754 !important;
-        border-color: #198754;
+    .lightbox-close-btn:hover {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        transform: scale(1.1);
     }
 </style>
 
@@ -342,23 +375,26 @@ if ($result && $result->num_rows > 0) {
             <div class="dark-glass-card p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
                     <span class="badge bg-success bg-opacity-25 text-success border border-success mb-2"><?php echo htmlspecialchars($product['category_name']); ?></span>
-                    <h1 class="fw-bold mb-3 text-white"><?php echo htmlspecialchars($product['product_name']); ?></h1>
-                    <h3 class="text-success fw-bold mb-3"><?php echo $price; ?></h3>
+                    <h1 class="fw-bold mb-2 text-white"><?php echo htmlspecialchars($product['product_name']); ?></h1>
+                    <h3 class="text-success fw-bold mb-2"><?php echo $price; ?></h3>
                     
-                    <p class="text-secondary mb-4"><?php echo nl2br(htmlspecialchars($product['description'])); ?></p>
+                    <!-- Scrollable Description Box -->
+                    <div class="product-description-scroll text-secondary mb-3">
+                        <?php echo nl2br(htmlspecialchars($product['description'])); ?>
+                    </div>
 
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <?php if(!empty($product['is_biodegradable'])): ?>
-                            <span class="badge bg-success-subtle text-success border border-success p-2 me-2"><i class="bi bi-recycle"></i> 100% Biodegradable</span>
+                            <span class="badge bg-success-subtle text-success border border-success p-2 me-2 mb-1"><i class="bi bi-recycle"></i> 100% Biodegradable</span>
                         <?php endif; ?>
                         <?php if(!empty($product['is_recyclable'])): ?>
-                            <span class="badge bg-primary-subtle text-primary border border-primary p-2 me-2"><i class="bi bi-arrow-repeat"></i> Recyclable Material</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary p-2 me-2 mb-1"><i class="bi bi-arrow-repeat"></i> Recyclable Material</span>
                         <?php endif; ?>
-                        <span class="badge bg-warning-subtle text-warning border border-warning p-2"><i class="bi bi-patch-check"></i> Authentic Ceylon Craft</span>
+                        <span class="badge bg-warning-subtle text-warning border border-warning p-2 mb-1"><i class="bi bi-patch-check"></i> Authentic Ceylon Craft</span>
                     </div>
                 </div>
 
-                <form action="cart-actions.php" method="POST" class="border border-secondary border-opacity-25 p-3 rounded bg-dark bg-opacity-50">
+                <form action="cart-actions.php" method="POST" class="border border-secondary border-opacity-25 p-3 rounded bg-dark bg-opacity-50 mt-auto">
                     <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
                     
                     <?php if(!empty($product['is_customizable'])): ?>
@@ -454,7 +490,7 @@ if ($result && $result->num_rows > 0) {
                                         
                                         <div class="d-flex align-items-center gap-2">
                                             <?php if($user_id): ?>
-                                                <form action="" method="POST">
+                                                <form action="" method="POST" class="d-inline">
                                                     <input type="hidden" name="review_id" value="<?php echo $rev['review_id']; ?>">
                                                     <button type="submit" name="react_review" class="btn btn-sm py-0 px-2 <?php echo $user_reacted ? 'btn-danger' : 'btn-outline-secondary'; ?>" style="font-size: 11px;">
                                                         <i class="bi bi-heart-fill me-1"></i> <?php echo $rc_count; ?>
@@ -638,14 +674,14 @@ if ($result && $result->num_rows > 0) {
     </div>
 </div>
 
-<!-- PRODUCT GALLERY LIGHTBOX MODAL WITH ARROWS (7x5 Inch Scale & Clear Close Icon) -->
+<!-- PRODUCT GALLERY LIGHTBOX MODAL WITH SMALL RED CLOSE BUTTON -->
 <div class="modal fade" id="productImageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content bg-transparent border-0 text-center">
-            <div class="position-relative d-inline-block mx-auto">
-                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 shadow" data-bs-dismiss="modal" aria-label="Close" style="z-index: 20;"></button>
+            <div class="position-relative d-inline-block mx-auto" style="width: 100%; max-width: 700px;">
+                <button type="button" class="btn-close btn-close-white lightbox-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
                 
-                <div class="lightbox-container shadow-lg border border-secondary">
+                <div class="lightbox-container shadow-lg">
                     <button class="lightbox-nav-btn lightbox-prev" onclick="prevProductImage()"><i class="bi bi-chevron-left"></i></button>
                     <img id="modalProductGalleryImg" src="" alt="Full View">
                     <button class="lightbox-nav-btn lightbox-next" onclick="nextProductImage()"><i class="bi bi-chevron-right"></i></button>
@@ -655,14 +691,14 @@ if ($result && $result->num_rows > 0) {
     </div>
 </div>
 
-<!-- SINGLE IMAGE LIGHTBOX (FOR REVIEWS - 7x5 Inch Scale & Clear Close Icon) -->
+<!-- SINGLE IMAGE LIGHTBOX (FOR REVIEWS - SMALL RED CLOSE BUTTON) -->
 <div class="modal fade" id="singleImageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content bg-transparent border-0 text-center">
-            <div class="position-relative d-inline-block mx-auto">
-                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 shadow" data-bs-dismiss="modal" aria-label="Close" style="z-index: 20;"></button>
+            <div class="position-relative d-inline-block mx-auto" style="width: 100%; max-width: 700px;">
+                <button type="button" class="btn-close btn-close-white lightbox-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
                 
-                <div class="lightbox-container shadow-lg border border-secondary">
+                <div class="lightbox-container shadow-lg">
                     <img id="modalSingleImg" src="" alt="Review Photo">
                 </div>
             </div>

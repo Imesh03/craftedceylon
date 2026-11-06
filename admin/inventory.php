@@ -20,7 +20,7 @@ $is_super_admin = ($current_admin && $current_admin['role'] === 'Super Admin');
 
 $message = '';
 
-// Handle Stock Quantity Quick Update (Available for Admin & Super Admin)
+// Handle Stock Quantity Quick Update
 if (isset($_POST['update_stock'])) {
     $product_id = intval($_POST['product_id']);
     $new_stock = intval($_POST['stock_quantity']);
@@ -35,19 +35,47 @@ if (isset($_POST['update_stock'])) {
     }
 }
 
-// Filter by Category if selected
+// Filter Options & Search handling
 $category_filter = isset($_GET['category_id']) ? intval($_GET['category_id']) : 0;
-$where_clause = "";
+$stock_filter = isset($_GET['stock_filter']) ? trim($_GET['stock_filter']) : 'all';
+$search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+$where_clauses = [];
+
 if ($category_filter > 0) {
-    $where_clause = "WHERE p.category_id = $category_filter";
+    $where_clauses[] = "p.category_id = $category_filter";
 }
 
-// Fetch products with categories
-$sql = "SELECT p.*, c.category_name FROM products p LEFT JOIN categories c ON p.category_id = c.category_id $where_clause ORDER BY p.stock_quantity ASC";
+if ($stock_filter === 'low') {
+    $where_clauses[] = "p.stock_quantity <= 5 AND p.stock_quantity > 0";
+} elseif ($stock_filter === 'out') {
+    $where_clauses[] = "p.stock_quantity <= 0";
+} elseif ($stock_filter === 'healthy') {
+    $where_clauses[] = "p.stock_quantity > 5";
+}
+
+if (!empty($search_query)) {
+    $escaped_search = $conn->real_escape_string($search_query);
+    if (is_numeric($search_query)) {
+        $where_clauses[] = "(p.product_id = '$escaped_search' OR p.product_name LIKE '%$escaped_search%')";
+    } else {
+        $where_clauses[] = "p.product_name LIKE '%$escaped_search%'";
+    }
+}
+
+$where_sql = "";
+if (count($where_clauses) > 0) {
+    $where_sql = "WHERE " . implode(" AND ", $where_clauses);
+}
+
+// Fetch products with categories, search and filters
+$sql = "SELECT p.*, c.category_name FROM products p LEFT JOIN categories c ON p.category_id = c.category_id $where_sql ORDER BY p.stock_quantity ASC";
 $result = $conn->query($sql);
 
-// Count low stock items (less than 5 units)
-$low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE stock_quantity <= 5")->fetch_assoc()['count'];
+// Count metrics for quick filter badges
+$low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE stock_quantity <= 5 AND stock_quantity > 0")->fetch_assoc()['count'];
+$out_of_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE stock_quantity <= 0")->fetch_assoc()['count'];
+$total_inventory_count = $conn->query("SELECT COUNT(*) as count FROM products")->fetch_assoc()['count'];
 ?>
 
 <!DOCTYPE html>
@@ -76,21 +104,40 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
 
         body {
             background-color: var(--bg-dark);
-            /* Creative Background Pattern with Subtle Gradient Overlay */
             background-image: linear-gradient(135deg, rgba(13, 13, 18, 0.95), rgba(20, 30, 25, 0.9)), 
-                              radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
-                              radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
+                            radial-gradient(circle at 10% 20%, rgba(25, 135, 84, 0.15) 0%, transparent 40%),
+                            radial-gradient(circle at 90% 80%, rgba(13, 202, 240, 0.08) 0%, transparent 40%);
             background-attachment: fixed;
             color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
         }
 
-        /* Sidebar Styling */
+        /* Fixed Sidebar Styling */
         .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
             backdrop-filter: blur(15px);
+            overflow-y: auto;
+            z-index: 1030;
+        }
+
+        /* Main Content Offset for Fixed Sidebar */
+        .main-content-wrapper {
+            margin-left: 16.666667%;
+        }
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                margin-left: 0;
+            }
+            .sidebar {
+                position: relative;
+                height: auto;
+            }
         }
 
         .nav-link {
@@ -121,6 +168,42 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
             border: 1px solid var(--border-color);
             border-radius: 18px;
             box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Creative Filter Pill Buttons */
+        .filter-pill {
+            background: rgba(18, 18, 24, 0.7);
+            border: 1px solid var(--border-color);
+            color: var(--text-sub);
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-pill:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .filter-pill.active {
+            background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+            color: #ffffff;
+            border-color: #198754;
+            box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+        }
+
+        .filter-pill.active-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+            color: #ffffff;
+            border-color: #dc3545;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
         }
 
         /* High-Contrast Table Styling */
@@ -178,10 +261,10 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar min-vh-100 p-3">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Fixed Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-3">
                 <div class="d-flex align-items-center gap-2 mb-4 px-2">
                     <div class="bg-success text-white rounded-3 p-2 d-flex align-items-center justify-content-center glow-success">
                         <i class="bi bi-flower1 fs-4"></i>
@@ -234,29 +317,46 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
                 </ul>
             </div>
 
-            <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 p-4 p-md-5">
+            <!-- Main Content with Left Margin Offset -->
+            <div class="col-md-9 col-lg-10 ms-auto main-content-wrapper p-4 p-md-5">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h2 class="fw-bold text-white mb-1">Inventory & Stock Management</h2>
                         <p class="text-secondary small mb-0">Monitor real-time product quantities and manage low stock alerts.</p>
                     </div>
-                    <?php if($low_stock_count > 0): ?>
-                        <div class="badge bg-danger p-2 px-3 fs-6 shadow-sm">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i> <?php echo $low_stock_count; ?> Low Stock Items
-                        </div>
-                    <?php endif; ?>
                 </div>
 
                 <?php if(!empty($message)): ?>
                     <div class="alert alert-success bg-success text-white border-0 py-2 small mb-4 shadow-sm"><?php echo $message; ?></div>
                 <?php endif; ?>
 
-                <!-- Category Filter Form -->
-                <div class="dark-card p-3 mb-4">
-                    <form action="inventory.php" method="GET" class="row align-items-center g-3">
-                        <div class="col-md-4">
-                            <label class="form-label small text-secondary mb-1 fw-bold">Filter by Category</label>
+                <!-- Creative Search, Filter Tabs & Category Filter Section -->
+                <div class="dark-card p-4 mb-4">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-center gap-3">
+                        <!-- Quick Stock Status Filter Pills -->
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="inventory.php?category_id=<?php echo $category_filter; ?>&stock_filter=all&search=<?php echo urlencode($search_query); ?>" class="filter-pill <?php echo ($stock_filter === 'all') ? 'active' : ''; ?>">
+                                <i class="bi bi-grid"></i> All Products <span class="badge bg-secondary bg-opacity-50 ms-1"><?php echo $total_inventory_count; ?></span>
+                            </a>
+                            <a href="inventory.php?category_id=<?php echo $category_filter; ?>&stock_filter=low&search=<?php echo urlencode($search_query); ?>" class="filter-pill <?php echo ($stock_filter === 'low') ? 'active-danger' : ''; ?>">
+                                <i class="bi bi-exclamation-triangle-fill text-warning"></i> Low Stock <span class="badge bg-warning text-dark ms-1"><?php echo $low_stock_count; ?></span>
+                            </a>
+                            <a href="inventory.php?category_id=<?php echo $category_filter; ?>&stock_filter=out&search=<?php echo urlencode($search_query); ?>" class="filter-pill <?php echo ($stock_filter === 'out') ? 'active-danger' : ''; ?>">
+                                <i class="bi bi-x-octagon-fill text-danger"></i> Out of Stock <span class="badge bg-danger ms-1"><?php echo $out_of_stock_count; ?></span>
+                            </a>
+                        </div>
+
+                        <!-- Product Search Bar & Category Selector -->
+                        <form action="inventory.php" method="GET" class="d-flex flex-column flex-sm-row align-items-center gap-2" style="width: 100%; max-width: 540px;">
+                            <input type="hidden" name="stock_filter" value="<?php echo htmlspecialchars($stock_filter); ?>">
+                            
+                            <!-- Search Input (Product ID or Name) -->
+                            <div class="input-group input-group-sm">
+                                <input type="text" name="search" class="form-control" placeholder="Search Product ID or Name..." value="<?php echo htmlspecialchars($search_query); ?>">
+                                <button class="btn btn-success" type="submit"><i class="bi bi-search"></i></button>
+                            </div>
+
+                            <!-- Category Select -->
                             <select name="category_id" class="form-select form-select-sm" onchange="this.form.submit()">
                                 <option value="0">All Categories</option>
                                 <?php
@@ -267,13 +367,12 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
                                 }
                                 ?>
                             </select>
-                        </div>
-                        <?php if($category_filter > 0): ?>
-                            <div class="col-md-2 d-flex align-items-end" style="padding-top: 22px;">
-                                <a href="inventory.php" class="btn btn-sm btn-outline-light"><i class="bi bi-x-circle me-1"></i> Clear Filter</a>
-                            </div>
-                        <?php endif; ?>
-                    </form>
+
+                            <?php if($category_filter > 0 || $stock_filter !== 'all' || !empty($search_query)): ?>
+                                <a href="inventory.php" class="btn btn-sm btn-outline-light text-nowrap" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i> Reset</a>
+                            <?php endif; ?>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Inventory Table -->
@@ -283,7 +382,7 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
                             <thead>
                                 <tr>
                                     <th>Image</th>
-                                    <th>Product Name</th>
+                                    <th>Product ID & Name</th>
                                     <th>Category</th>
                                     <th>Price (LKR)</th>
                                     <th>Current Stock Status</th>
@@ -298,6 +397,7 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
                                             <img src="../<?php echo htmlspecialchars($row['main_image']); ?>" class="rounded border border-secondary shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Product">
                                         </td>
                                         <td>
+                                            <span class="badge bg-success bg-opacity-25 text-success border border-success px-2 py-1 me-1">#<?php echo $row['product_id']; ?></span>
                                             <span class="fw-semibold text-white"><?php echo htmlspecialchars($row['product_name']); ?></span>
                                         </td>
                                         <td><span class="badge bg-secondary opacity-75"><?php echo htmlspecialchars($row['category_name'] ?? 'Uncategorized'); ?></span></td>
@@ -312,7 +412,7 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <form action="inventory.php<?php echo ($category_filter > 0) ? '?category_id='.$category_filter : ''; ?>" method="POST" class="d-flex gap-2">
+                                            <form action="inventory.php?category_id=<?php echo $category_filter; ?>&stock_filter=<?php echo $stock_filter; ?>&search=<?php echo urlencode($search_query); ?>" method="POST" class="d-flex gap-2">
                                                 <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
                                                 <input type="number" name="stock_quantity" value="<?php echo $row['stock_quantity']; ?>" min="0" class="form-control form-control-sm text-center fw-bold" style="width: 90px;" required>
                                                 <button type="submit" name="update_stock" class="btn btn-sm btn-success fw-bold px-3">
@@ -324,7 +424,7 @@ $low_stock_count = $conn->query("SELECT COUNT(*) as count FROM products WHERE st
                                     <?php endwhile; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="6" class="text-center text-secondary py-5">No products found in inventory.</td>
+                                        <td colspan="6" class="text-center text-secondary py-5">No products found matching your search or filter criteria.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
